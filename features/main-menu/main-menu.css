@@ -1,0 +1,291 @@
+body {
+  margin: 0;
+  padding: 0;
+  background: url("./assets/Bg.png") no-repeat center center fixed;
+  background-size: cover;
+  font-family: Arial, sans-serif;
+  color: white;
+  overflow: hidden;
+  cursor: url("./assets/cursors/CelesteCursor.png") 26 40, auto;
+}
+
+/* Container for pins */
+.map-container {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+}
+
+.id-card {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  width: 300px;
+  height: 160px;
+  display: flex;
+  flex-direction: row;
+  backdrop-filter: blur(14px);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+  text-decoration: none;
+  z-index: 1000;
+  overflow: hidden;
+}
+
+/* Bottom edge shine effect */
+.id-card::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(255, 255, 255, 0.6),
+    transparent
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.id-card:hover::after {
+  opacity: 1;
+  animation: edgeShine 1.2s ease-out;
+}
+
+@keyframes edgeShine {
+  0% {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scaleX(1.05);
+    opacity: 1;
+  }
+  100% {
+    transform: scaleX(1);
+    opacity: 0.6;
+  }
+}
+
+.id-card-content {
+  display: flex;
+  flex-direction: row-reverse; /* flips the image to the right */
+  width: 100%;
+  height: 100%;
+}
+
+.id-card-info {
+  flex: 1;
+  padding: 1rem 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  color: #fff;
+}
+
+.id-card-img-container {
+  flex: 0 0 120px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.id-card-img {
+  width: 100px;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 12px;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
+}
+
+.id-card-info {
+  flex: 1;
+  padding: 0.75rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  color: #fff;
+}
+
+.id-card-info strong {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.id-card-info p {
+  font-size: 0.85rem;
+  margin: 0.15rem 0;
+  color: #ccc;
+}
+
+/* Pin style with red outer and snow-white inner */
+.pin {
+  position: absolute; /* positioned ancestor for panel */
+  width: 26px;
+  height: 26px;
+  background: red;
+  border-radius: 50%;
+  cursor: pointer;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: pulse 4s ease-in-out infinite;
+  z-index: 1; /* sits above hover bridge, below panel */
+}
+
+/* Invisible hover-bridge to cover the gap between pin and panel */
+.pin::before {
+  content: "";
+  position: absolute;
+  left: 0; /* starts at pin center (due to translate on .pin) */
+  top: -40px; /* extend upward a bit */
+  width: 200px; /* 35px offset + 220px panel + buffer */
+  height: 150px; /* tall enough to fully cover the panel area */
+  background: transparent;
+  z-index: 0; /* under panel so it doesn't block clicks */
+}
+
+/* Inner white dot */
+.pin::after {
+  content: "";
+  width: 14px;
+  height: 14px;
+  background: #f8f9fa; /* cool light snow white */
+  border-radius: 50%;
+}
+
+/* Slower pulse animation — scale only (no translate jitter) */
+@keyframes pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 6px rgba(255, 0, 0, 0.6);
+  }
+  50% {
+    transform: scale(1.1);
+    box-shadow: 0 0 14px rgba(255, 0, 0, 0.9);
+  }
+}
+
+/* Side panel */
+.panel {
+  position: absolute; /* positioned relative to .pin */
+  left: 35px;
+  top: -100px;
+  width: 300px;
+  background: rgba(0, 0, 0, 0.85);
+  border: 2px solid white;
+  padding: 10px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(10px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  font-size: small;
+  z-index: 2; /* above pin and hover bridge */
+  pointer-events: none; /* off until visible to avoid flicker */
+}
+
+.panel img {
+  max-width: 300px;
+  border: 1px solid white;
+  margin-bottom: 8px;
+}
+
+/* Keep panel visible when hovering pin OR panel */
+.pin:hover .panel,
+.panel:hover {
+  cursor: url(./assets/cursors/hoverCursor0.png) 200 0, pointer;
+  -webkit-animation: cursor 400ms infinite;
+  animation: cursor 400ms infinite;
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  pointer-events: auto; /* enable interaction when shown */
+}
+
+/* Pin positions — adjust as needed */
+
+/* Bake or be baked */
+.pin.trail {
+  cursor: url(./assets/cursors/hoverCursor0.png) 200 0, pointer;
+  -webkit-animation: cursor 400ms infinite;
+  animation: cursor 400ms infinite;
+  left: 51%;
+  top: 82%;
+}
+.pin.midTrail {
+  cursor: url(./assets/cursors/hoverCursor0.png) 200 0, pointer;
+  -webkit-animation: cursor 400ms infinite;
+  animation: cursor 400ms infinite;
+  left: 51%;
+  top: 60%;
+}
+
+.pin.trailEnd {
+  cursor: url(./assets/cursors/hoverCursor0.png) 200 0, pointer;
+  -webkit-animation: cursor 400ms infinite;
+  animation: cursor 400ms infinite;
+  left: 25%;
+  top: 67%;
+}
+
+/* mini game link appearance */
+a {
+  color: #ffd700;
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+@-webkit-keyframes cursor {
+  0% {
+    cursor: url(./assets/cursors/hoverCursor0.png) 26 26, auto;
+  }
+  20% {
+    cursor: url(./assets/cursors/hoverCursor1.png) 26 26, auto;
+  }
+  40% {
+    cursor: url(./assets/cursors/hoverCursor2.png) 26 26, auto;
+  }
+  60% {
+    cursor: url(./assets/cursors/hoverCursor3.png) 26 26, auto;
+  }
+  80% {
+    cursor: url(./assets/cursors/hoverCursor4.png) 26 26, auto;
+  }
+  100% {
+    cursor: url(./assets/cursors/hoverCursor5.png) 26 26, auto;
+  }
+}
+
+@keyframes cursor {
+  0% {
+    cursor: url(./assets/cursors/hoverCursor0.png) 26 26, auto;
+  }
+  20% {
+    cursor: url(./assets/cursors/hoverCursor1.png) 26 26, auto;
+  }
+  40% {
+    cursor: url(./assets/cursors/hoverCursor2.png) 26 26, auto;
+  }
+  60% {
+    cursor: url(./assets/cursors/hoverCursor3.png) 26 26, auto;
+  }
+  80% {
+    cursor: url(./assets/cursors/hoverCursor4.png) 26 26, auto;
+  }
+  100% {
+    cursor: url(./assets/cursors/hoverCursor5.png) 26 26, auto;
+  }
+}

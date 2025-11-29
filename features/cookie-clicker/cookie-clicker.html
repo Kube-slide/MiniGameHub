@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Bake or be Baked</title>
+    <link rel="stylesheet" href="./cookie-clicker.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Barriecito&display=swap"
+      rel="stylesheet"
+    />
+    <script type="module" defer src="./cookie-clicker.js"></script>
+  </head>
+  <body>
+    <div id="winner-panel" class="hidden">
+      <div class="winner-content">
+        <p class="winner-text">Player X Wins!</p>
+        <button id="close-winner-btn">Play again!</button>
+      </div>
+    </div>
+
+    <h1 class="title">Bake or be Baked</h1>
+    <div class="game-container">
+      <div class="player-panel" id="player1">
+        <h2>
+          <span class="player-icon-frame">
+            <img
+              src="../../assets/player1.png"
+              alt="Player 1 Icon"
+              class="player-icon"
+            />
+          </span>
+          Player 1
+        </h2>
+        <div class="progress-bar">
+          <div class="hp-bar red"></div>
+          <div class="hp-bar green" style="width: 100%"></div>
+        </div>
+        <p class="cookie-count">TOTAL COOKIES: 0</p>
+        <div class="actions">
+          <button class="btn bake">Bake 🍪</button>
+          <button class="btn smack">Smack 🤚</button>
+          <button class="btn consume">Consume 🍴</button>
+        </div>
+      </div>
+
+      <div class="player-panel" id="player2">
+        <h2>
+          <span class="player-icon-frame">
+            <img
+              src="../../assets/player2.jpg"
+              alt="Player 2 Icon"
+              class="player-icon"
+            />
+          </span>
+          Player 2
+        </h2>
+        <div class="progress-bar">
+          <div class="hp-bar red"></div>
+          <div class="hp-bar green" style="width: 100%"></div>
+        </div>
+
+        <p class="cookie-count">TOTAL COOKIES: 0</p>
+        <div class="actions">
+          <button class="btn bake">Bake 🍪</button>
+          <button class="btn smack">Smack 🤚</button>
+          <button class="btn consume">Consume 🍴</button>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

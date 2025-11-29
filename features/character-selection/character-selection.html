@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Player Select — MVC2 Inspired</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="./character-selection.css" />
+    <script defer type="module" src="./ai-assisted-animation.js"></script>
+    <script defer type="module" src="./character-selection.js"></script>
+    <script
+      src="https://code.jquery.com/jquery-3.7.1.min.js"
+      integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+      crossorigin="anonymous"
+    ></script>
+  </head>
+  <body>
+    <!-- Left Panel: Selected Player Info -->
+    <section class="panel" id="player-panel">
+      <div class="banner">PLAYER SELECTION</div>
+
+      <!-- keep original containers but add imgs inside so JS can set .src without changing layout -->
+      <div id="portrait" class="portrait">
+        <img id="portrait-img" alt="Portrait" src="" />
+      </div>
+      <div id="selected-icon" class="selected-icon">
+        <img id="selected-icon-img" alt="Selected portrait" src="" />
+      </div>
+
+      <div id="slot" class="slot">---</div>
+      <div id="stats" class="stats"></div>
+      <form id="submit-form" action="../main-menu/main-menu.html" method="post">
+        <!-- Hidden input to hold the serialized player object used by your script -->
+        <input type="hidden" id="player" name="Player" value="none" />
+
+        <!-- Visible submit button left unchanged visually (removed id to avoid conflict with hidden input) -->
+        <button type="submit" class="toggle" value="none">
+          Submit Selection
+        </button>
+      </form>
+    </section>
+
+    <!-- Sphere stays in the center -->
+
+    <section class="center">
+      <div class="wireframe-sphere"></div>
+      <div class="wireframe-sphere secondary"></div>
+      <div class="sphere-wrap">
+        <div id="sphere" class="sphere"></div>
+      </div>
+    </section>
+
+    <!-- <div class="sphere-wrap">
+      <div id="sphere" class="sphere"></div>
+    </div> -->
+
+    <!-- Right Panel: Custom Character Creator -->
+    <section class="panel" id="custom-panel">
+      <div class="banner">CREATE CUSTOM CHARACTER</div>
+      <form id="custom-form" method="post">
+        <label>Upload Image:</label>
+        <input type="file" id="custom-image" accept="image/*" />
+
+        <!-- preview container kept, with an img added -->
+        <div id="image-preview" class="portrait">
+          <img id="image-preview-img" alt="Preview" src="" />
+        </div>
+
+        <label>Name:</label>
+        <input type="text" id="custom-name" />
+
+        <label>Age:</label>
+        <input type="number" id="custom-age" />
+
+        <label>Resilience:</label>
+        <input type="number" id="custom-resilience" />
+
+        <label>Exhaustion:</label>
+        <input type="number" id="custom-exhaustion" />
+
+        <label>Defense:</label>
+        <input type="number" id="custom-defense" />
+
+        <button type="button" id="create-character" class="toggle">
+          Create Character
+        </button>
+      </form>
+    </section>
+  </body>
+</html>

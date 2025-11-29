@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Papa's Absolute Monopoly</title>
+    <link rel="stylesheet" href="absolute-monopoly.css" />
+    <script defer type="module" src="./absolute-monopoly.js"></script>
+  </head>
+  <body>
+    <div class="container">
+      <h1 class="title">Papa's Absolute Monopoly</h1>
+
+      <div class="main-layout">
+        <!-- Left: Player Info -->
+        <section class="panel player-info" aria-label="Player information">
+          <img
+            id="playerAvatar"
+            class="avatar"
+            src="https://upload.wikimedia.org/wikipedia/commons/8/83/Default-Icon.jpg"
+            alt="Player avatar"
+          />
+
+          <h2 id="playerName" class="player-name">Player 1 Name</h2>
+
+          <div class="-block">
+            <label for="playerStats" class="info-label">STATS</label>
+            <div id="playerStats" class="info-value">...</div>
+          </div>
+
+          <div class="info-block">
+            <label for="playerItems" class="info-label">ITEMS</label>
+            <div id="playerItems" class="info-value">...</div>
+          </div>
+        </section>
+
+        <!-- Center: Game Controls (BUSINESS | SEPARATOR | MANUFACTURING) -->
+        <section class="panel game-controls compact" aria-label="Game controls">
+          <div class="controls-top">
+            <button class="btn primary" id="makeItemBtn">Make pizza</button>
+          </div>
+
+          <div class="spacer-large" aria-hidden="true"></div>
+
+          <div class="center-grid">
+            <!-- BUSINESS column (left-aligned content) -->
+            <div class="subpanel business">
+              <h3 class="subheading business-heading">BUSINESS</h3>
+
+              <div class="info-block compact-row left-align">
+                <label for="fundsValue" class="info-label"
+                  >Available Funds</label
+                >
+                <div id="fundsValue" class="info-value">
+                  <span id="fundsAmount">0</span>$
+                </div>
+              </div>
+
+              <div class="info-block compact-row left-align">
+                <label for="unsold Pizza" class="info-label"
+                  >Unsold Pizza</label
+                >
+                <div id="unsoldInventory" class="info-value">
+                  <span id="inventoryCount">0</span>
+                </div>
+              </div>
+
+              <div class="info-block compact-row left-align">
+                <label for="public Demand" class="info-label"
+                  >Public Demand</label
+                >
+                <div id="publicDemand" class="info-value">
+                  <span id="demand">32</span>%
+                </div>
+              </div>
+
+              <div class="info-block inline-controls compact-row left-align">
+                <label for="price Per Pizza" class="info-label"
+                  >Price per pizza</label
+                >
+                <div class="price-row">
+                  <div id="pricePerItem" class="info-value info-value-inline">
+                    <span id="priceAmount">0.25</span>$
+                  </div>
+
+                  <div class="adj-buttons">
+                    <button class="btn small" id="priceDecrease">−</button>
+                    <button class="btn small" id="priceIncrease">+</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- thin centered white separator between BUSINESS and MANUFACTURING -->
+            <div class="center-separator" aria-hidden="true"></div>
+
+            <!-- MANUFACTURING column (right-aligned content) -->
+            <div class="subpanel manufacturing">
+              <h3 class="subheading manufacturing-heading">MANUFACTURING</h3>
+
+              <div class="info-block compact-row right-align">
+                <label for="PizzasPerSecond" class="info-label"
+                  >Pizzas per Second</label
+                >
+                <div id="itemsPerSecond" class="info-value">
+                  <span id="itemsRate">0</span>
+                </div>
+              </div>
+
+              <div class="info-block compact-row right-align">
+                <label for="remainingDough" class="info-label"
+                  >Remaining Dough</label
+                >
+                <div id="remainingRawMaterial" class="info-value">
+                  <span id="rawMaterial">1000</span>
+                </div>
+              </div>
+
+              <div class="purchase-row compact-row purchase-under-raw">
+                <button class="btn purchase" id="purchaseMatsBTN">
+                  Purchase ($<span id="purchaseMats">1</span>)
+                </button>
+              </div>
+
+              <div class="info-block compact-row right-align">
+                <label for="pizza ovens" class="info-label">Pizza ovens</label>
+                <div id="factories" class="info-value">
+                  <span id="factoryCount">0</span>
+                </div>
+              </div>
+
+              <!-- second Purchase button beneath Factories -->
+              <div class="purchase-row compact-row">
+                <button class="btn purchase" id="purchaseFactoryBTN">
+                  Purchase ($<span id="purchaseFactory">1</span>)
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Right: Sassy NPC -->
+        <section class="panel npc" aria-label="Papa Louie">
+          <img
+            class="npc-avatar"
+            src="https://media0.giphy.com/media/v1.Y2lkPTZjMDliOTUyb3RsbHAyOGx2c3ZuOHpnc2l2bWtwdDUxZDdmdTF6Y3hxMzNseHNmeSZlcD12MV9zdGlja2Vyc19zZWFyY2gmY3Q9cw/xwxcd8R1t9omNAJua6/200.gif"
+            alt="Papa louie"
+          />
+          <div class="speech-bubble">
+            <div id="npcSpeech" class="speech-text">skill issue</div>
+          </div>
+          <h3 class="npc-name">PAPA LOUIE</h3>
+        </section>
+      </div>
+    </div>
+  </body>
+</html>

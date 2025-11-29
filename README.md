@@ -1,4 +1,5 @@
 # MiniGameHub
+
 > December 2025
 
 Project bio
@@ -19,7 +20,3 @@ Additional Resources:
 
 - [3D rendering on the web : Threejs](https://threejs.org/)
 - [Online multiplayer : NetplayJs](https://github.com/rameshvarun/netplayjs?tab=readme-ov-file)
-
-## Database Schema 🗄️ (if applicable)
-
-Attach your database schema pics

@@ -1,0 +1,20 @@
+{
+  "name": "assignment1",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "first assignment :P",
+  "homepage": "https://github.com/Poggie-Teaching-Web-At-JAC/01-ready-player-one-Kube-slide#readme",
+  "bugs": {
+    "url": "https://github.com/Poggie-Teaching-Web-At-JAC/01-ready-player-one-Kube-slide/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Poggie-Teaching-Web-At-JAC/01-ready-player-one-Kube-slide.git"
+  },
+  "license": "ISC",
+  "author": "me",
+  "main": "player.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}

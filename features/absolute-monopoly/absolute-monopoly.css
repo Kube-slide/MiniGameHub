@@ -1,0 +1,380 @@
+:root {
+  --bg: #0f0f11;
+  --panel-bg: #191919;
+  --panel-border: #555;
+  --muted: #cfcfcf;
+  --accent: #c53023;
+  --gap: 56px; /* more breathing room between main sections */
+  --panel-padding: 20px;
+  --radius: 10px;
+  --compact-gap: 10px;
+  --separator-color: rgba(255, 255, 255, 0.14);
+}
+
+/* base reset */
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  background-image: url("./assets/Bg.png");
+  background-size: contain;
+  height: 100%;
+  margin: 0;
+}
+body {
+  font-family: "Segoe UI", Roboto, system-ui, -apple-system, "Helvetica Neue",
+    Arial;
+  background: linear-gradient(180deg, var(--bg), #ffffff38 60%);
+  color: #eee;
+  padding: 44px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Outer container */
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 28px;
+  border: 3px solid var(--panel-border);
+  background: rgba(20, 20, 20, 0.6);
+  border-radius: 12px;
+}
+
+/* Title */
+.title {
+  text-align: center;
+  margin: 0 0 var(--gap) 0;
+  font-size: 2rem;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+/* Layout: left, center, right with more space */
+.main-layout {
+  display: flex;
+  gap: var(--gap);
+  align-items: flex-start;
+  width: 100%;
+}
+
+/* Panels */
+.panel {
+  background: var(--panel-bg);
+  border: 2px solid var(--panel-border);
+  padding: var(--panel-padding);
+  border-radius: var(--radius);
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 14px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+/* widths: left and right fixed-ish, center compressed to avoid scrolling */
+.player-info {
+  flex: 0 0 300px;
+  max-width: 340px;
+  width: 100%;
+}
+.npc {
+  flex: 0 0 260px;
+  max-width: 300px;
+  width: 100%;
+}
+.game-controls {
+  flex: 1 1 520px;
+  min-width: 420px;
+  max-width: 760px;
+}
+
+/* compact center panel */
+.game-controls.compact {
+  padding: 16px;
+  gap: 10px;
+  max-height: 520px;
+  overflow-y: auto;
+}
+
+/* give bigger spacer between Make Item and lists */
+.spacer-large {
+  height: 20px;
+}
+
+/* center-grid: BUSINESS | separator | MANUFACTURING */
+.center-grid {
+  display: grid;
+  grid-template-columns: 1fr 28px 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+/* thin centered separator column */
+.center-separator {
+  width: 28px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  position: relative;
+  padding-top: 6px;
+}
+.center-separator::before {
+  content: "";
+  width: 2px;
+  height: 100%;
+  background: var(--separator-color);
+  border-radius: 2px;
+  display: block;
+  margin: 0 auto;
+}
+
+/* Subpanels inside center */
+.subpanel {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Subheading: slightly larger and bold */
+.subheading {
+  margin: 0 0 6px 0;
+  color: var(--muted);
+  font-size: 1.03rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+/* Player and NPC name */
+.player-name,
+.npc-name {
+  margin: 6px 0 8px 0;
+  text-align: center;
+  color: var(--muted);
+  font-weight: 700;
+  word-break: break-word;
+}
+
+.npc-avatar {
+  max-height: 300px;
+  object-fit: contain;
+}
+
+/* Info blocks compact */
+.info-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+/* Compact rows align label/value horizontally when space allows, otherwise stack */
+.compact-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* LEFT-align business content; RIGHT-align manufacturing content */
+.left-align {
+  align-items: flex-start;
+  text-align: left;
+}
+.right-align {
+  align-items: flex-end;
+  text-align: right;
+}
+
+/* Label style */
+.info-label {
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.1;
+  display: block;
+  min-width: 120px;
+  flex: 0 0 auto;
+  word-break: break-word;
+}
+
+/* Read-only value container */
+.info-value {
+  padding: 10px 12px;
+  background: #1f7c08;
+  border: 1px solid #2b2b2b;
+  color: #e6e6e6;
+  border-radius: 8px;
+  min-height: 36px;
+  display: block;
+  font-size: 0.95rem;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  flex: 1 1 auto;
+}
+
+#playerStats {
+  white-space: pre-wrap;
+}
+
+/* Inline small value when needed */
+/* .info-value-inline {
+  min-width: 70px;
+  max-width: 220px;
+} */
+
+/* Price row ensures left alignment of label/value with adjacent buttons */
+.price-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: flex-start; /* ensures price and buttons are on the left for BUSINESS */
+  width: 100%;
+  flex: 1 1 auto;
+}
+
+/* For manufacturing column force right alignment of entire price-row like blocks if needed */
+.manufacturing .price-row {
+  justify-content: flex-end;
+}
+
+/* Inline controls (price + adj buttons) */
+.inline-controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+}
+.label-and-value {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.adj-buttons {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 0 0 auto;
+}
+
+/* Buttons */
+.btn {
+  border: 0;
+  background: #3278cc;
+  color: #eee;
+  padding: 10px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.95rem;
+  transition: transform 0.08s ease, background-color 0.12s ease,
+    box-shadow 0.12s ease;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.35);
+}
+.btn:hover {
+  transform: translateY(-1px);
+  background: #053650;
+}
+.btn:active {
+  transform: translateY(0);
+}
+.btn.primary {
+  background: linear-gradient(180deg, var(--accent), #ff9411);
+  color: #052230;
+  box-shadow: 0 6px 22px rgba(78, 162, 220, 0.14);
+}
+.btn.small {
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 1rem;
+}
+.btn.purchase {
+  background: linear-gradient(180deg, #c35cca, #6c3dd9);
+  padding: 10px 14px;
+  flex: 1 1 auto;
+}
+
+/* Purchase rows */
+.purchase-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+.purchase-under-raw {
+  justify-content: flex-end;
+  margin-top: 6px;
+}
+
+/* Controls top centering */
+.controls-top {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+/* NPC speech bubble */
+.speech-bubble {
+  margin-top: 6px;
+  display: flex;
+  justify-content: center;
+}
+.speech-text {
+  background: #0f1720;
+  color: #cfcfcf;
+  border: 1px solid #24343a;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  max-width: 100%;
+  word-break: break-word;
+  white-space: normal;
+}
+
+.avatar {
+  max-width: 250px;
+  max-height: 200px;
+  object-fit: contain;
+}
+
+/* Responsive adjustments: stack on small screens, keep spacing but avoid overflow */
+@media (max-width: 1100px) {
+  .main-layout {
+    flex-direction: column;
+    gap: 28px;
+  }
+  .player-info,
+  .npc {
+    max-width: none;
+    flex: 1 1 auto;
+  }
+  .game-controls {
+    min-width: unset;
+    max-width: none;
+    flex: 1 1 auto;
+  }
+  .center-grid {
+    grid-template-columns: 1fr;
+    row-gap: 12px;
+  }
+  .center-separator {
+    display: none;
+  }
+  .game-controls.compact {
+    max-height: none;
+    overflow: visible;
+  }
+  .info-label {
+    min-width: 100px;
+  }
+  .placeholder-img {
+    height: 100px;
+  }
+}
