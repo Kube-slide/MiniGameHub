@@ -3,7 +3,7 @@
 //Get the items
 import { ITEMS } from "../../constants/items.js";
 //get player
-import { PLAYERS } from "../../constants/player.js";
+import { PLAYER_1 } from "../../constants/player.js";
 
 // ? Create the star for the ratings dynamically instead of manually
 function dynamicStarAmount(rating) {
