@@ -36,7 +36,7 @@ scene.add(dirLight);
 
 let model;
 const loader = new GLTFLoader();
-loader.load("/public/a.glb", (gltf) => {
+loader.load("./public/a.glb", (gltf) => {
   gltf.scene.traverse((child) => {
     if (child.isMesh) {
       const mat = child.material;
