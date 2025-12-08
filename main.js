@@ -122,5 +122,5 @@ animate();
 
 document.querySelector("#playTheGame").addEventListener("click", () => {
   window.location.href =
-    "./features/character-selection/character-selection.html";
+    BaseUrl + "features/character-selection/character-selection.html";
 });
