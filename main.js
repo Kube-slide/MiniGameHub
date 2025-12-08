@@ -35,8 +35,9 @@ dirLight.castShadow = true;
 scene.add(dirLight);
 
 let model;
+const BaseUrl = import.meta.env.BASE_URL;
 const loader = new GLTFLoader();
-loader.load("/MiniGameHub/a.glb", (gltf) => {
+loader.load(`${BaseUrl}a.glb`, (gltf) => {
   gltf.scene.traverse((child) => {
     if (child.isMesh) {
       const mat = child.material;
