@@ -121,6 +121,5 @@ function animate() {
 animate();
 
 document.querySelector("#playTheGame").addEventListener("click", () => {
-  window.location.href =
-    BaseUrl + "features/character-selection/character-selection.html";
+  window.location.href = `${BaseUrl}features/character-selection/character-selection.html`;
 });
