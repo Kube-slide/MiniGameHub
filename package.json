@@ -4,5 +4,22 @@
   },
   "devDependencies": {
     "vite": "^7.2.6"
-  }
+  },
+  "name": "final-web",
+  "version": "1.0.0",
+  "description": "> December 2025",
+  "main": "main.js",
+  "scripts": {
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Kube-slide/MiniGameHub.git"
+  },
+  "author": "kube-slide",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Kube-slide/MiniGameHub/issues"
+  },
+  "homepage": "https://github.com/Kube-slide/MiniGameHub#readme"
 }
