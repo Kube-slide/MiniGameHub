@@ -10,7 +10,10 @@
   "description": "> December 2025",
   "main": "main.js",
   "scripts": {
-    "test": "test"
+    "test": "test",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "repository": {
     "type": "git",
