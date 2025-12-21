@@ -13,6 +13,17 @@ export default defineConfig({
           __dirname,
           "features/character-selection/character-selection.html"
         ),
+
+        "absolute-monopoly": resolve(
+          __dirname,
+          "features/absolute-monopoly/absolute-monopoly.html"
+        ),
+        "cookie-clicker": resolve(
+          __dirname,
+          "features/cookie-clicker/cookie-clicker.html"
+        ),
+        "main-menu": resolve(__dirname, "features/main-menu/main-menu.html"),
+        "the-shop": resolve(__dirname, "features/the-shop/the-shop.html"),
       },
     },
   },
