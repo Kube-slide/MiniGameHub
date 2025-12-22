@@ -103,7 +103,7 @@ async function init() {
       movement.y = 0; // Lock to ground
 
       // Physics Calculation
-      characterController.computeColliderMovement(playerBody.getCollider(0), {
+      characterController.computeColliderMovement(playerBody.collider(0), {
         x: movement.x,
         y: -9.81 * delta,
         z: movement.z,
