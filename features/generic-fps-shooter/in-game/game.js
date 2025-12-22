@@ -37,15 +37,9 @@ window.addEventListener("resize", () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-const light1 = new THREE.SpotLight(undefined, Math.PI * 10);
-light1.position.set(2.5, 5, 5);
-light1.angle = Math.PI / 3;
-light1.penumbra = 0.5;
-light1.castShadow = true;
-light1.shadow.blurSamples = 10;
-light1.shadow.radius = 5;
-light1.shadow.bias = -0.002;
-scene.add(light1);
+const light = new THREE.DirectionalLight(0xf3ebbe, 2.4);
+light.position.set(-20, 100, 20);
+light.target.position.set(0, 0, 0);
 
 //? Enable stats for debugging
 const stats = new Stats();
