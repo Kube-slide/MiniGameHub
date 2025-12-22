@@ -7,6 +7,7 @@
 import * as THREE from "three";
 import Stats from "three/addons/libs/stats.module.js";
 import RAPIER from "@dimforge/rapier3d-compat";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
 //Wait for Rapier to compile
 await RAPIER.init();
@@ -21,13 +22,13 @@ const camera = new THREE.PerspectiveCamera(
   75,
   window.innerWidth / window.innerHeight,
   0.1,
-  100
+  1000
 );
 
 camera.position.set(0, 2, 5);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
-
+renderer.shadowMap.enabled = true;
 document.body.appendChild(renderer.domElement);
 
 //! Allows dynamic resizing of window
@@ -37,37 +38,53 @@ window.addEventListener("resize", () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-const distance = 50.0;
-const angle = Math.PI / 4.0;
-const penumbra = 0.5;
-const decay = 1.0;
+const light = new THREE.HemisphereLight(0xb1e1ff, 0xb97a20, 1);
+scene.add(light);
 
-let light = new THREE.SpotLight(
-  0xffffff,
-  100.0,
-  distance,
-  angle,
-  penumbra,
-  decay
+const Skylight = new THREE.DirectionalLight(0xffffff, 1);
+Skylight.position.set(10, 20, 10);
+Skylight.target.position.set(0, 0, -10);
+Skylight.castShadow = true;
+Skylight.shadow.mapSize.width = 512;
+Skylight.shadow.mapSize.height = 512;
+Skylight.shadow.camera.left = -50;
+Skylight.shadow.camera.right = 50;
+Skylight.shadow.camera.top = 50;
+Skylight.shadow.camera.bottom = -50;
+Skylight.shadow.camera.near = 0.5;
+Skylight.shadow.camera.far = 500;
+scene.add(Skylight);
+scene.add(Skylight.target);
+
+//? Create the bg
+const loader = new THREE.CubeTextureLoader();
+const texture = loader.load([
+  "./assets/px.png",
+  "./assets/nx.png",
+  "./assets/py.png",
+  "./assets/ny.png",
+  "./assets/pz.png",
+  "./assets/nz.png",
+]);
+scene.background = texture;
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 0, 0);
+
+const sphereRadius = 3;
+const sphereWidthDivisions = 32;
+const sphereHeightDivisions = 16;
+const sphereGeo = new THREE.SphereGeometry(
+  sphereRadius,
+  sphereWidthDivisions,
+  sphereHeightDivisions
 );
-light.castShadow = true;
-light.shadow.bias = -0.00001;
-light.shadow.mapSize.width = 4096;
-light.shadow.mapSize.height = 4096;
-light.shadow.camera.near = 1;
-light.shadow.camera.far = 100;
-
-light.position.set(25, 25, 0);
-light.lookAt(0, 0, 0);
-this.scene_.add(light);
-
-const upColour = 0xffff80;
-const downColour = 0x808080;
-light = new THREE.HemisphereLight(upColour, downColour, 0.5);
-light.color.setHSL(0.6, 1, 0.6);
-light.groundColor.setHSL(0.095, 1, 0.75);
-light.position.set(0, 4, 0);
-this.scene_.add(light);
+const sphereMat = new THREE.MeshStandardMaterial({ color: "#CA8" });
+const mesh = new THREE.Mesh(sphereGeo, sphereMat);
+mesh.castShadow = true;
+mesh.receiveShadow = true;
+mesh.position.set(0, 4, -10);
+scene.add(mesh);
 
 //? Enable stats for debugging
 const stats = new Stats();
@@ -76,9 +93,10 @@ document.body.appendChild(stats.dom);
 //? Create the floor
 const floorMesh = new THREE.Mesh(
   new THREE.BoxGeometry(100, 1, 100),
-  new THREE.MeshPhongMaterial()
+  new THREE.MeshStandardMaterial({ color: 0x00ff00 })
 );
 floorMesh.position.y = -1;
+floorMesh.receiveShadow = true;
 scene.add(floorMesh);
 const floorBody = world.createRigidBody(
   RAPIER.RigidBodyDesc.fixed().setTranslation(0, -1, 0)
@@ -99,6 +117,7 @@ function animate() {
   renderer.render(scene, camera);
 
   stats.update();
+  controls.update();
 }
 
 animate();
