@@ -23,6 +23,8 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   100
 );
+
+camera.position.set(0, 2, 5);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 
@@ -34,6 +36,16 @@ window.addEventListener("resize", () => {
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
+
+const light1 = new THREE.SpotLight(undefined, Math.PI * 10);
+light1.position.set(2.5, 5, 5);
+light1.angle = Math.PI / 3;
+light1.penumbra = 0.5;
+light1.castShadow = true;
+light1.shadow.blurSamples = 10;
+light1.shadow.radius = 5;
+light1.shadow.bias = -0.002;
+scene.add(light1);
 
 //? Enable stats for debugging
 const stats = new Stats();
