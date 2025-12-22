@@ -24,6 +24,10 @@ export default defineConfig({
         ),
         "main-menu": resolve(__dirname, "features/main-menu/main-menu.html"),
         "the-shop": resolve(__dirname, "features/the-shop/the-shop.html"),
+        "generic-fps-shooter": resolve(
+          __dirname,
+          "features/generic-fps-shooter/lobby.html"
+        ),
       },
     },
   },

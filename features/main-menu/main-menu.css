@@ -239,6 +239,14 @@ body {
   top: 67%;
 }
 
+.pin.peak {
+  cursor: url(./assets/cursors/hoverCursor0.png) 200 0, pointer;
+  -webkit-animation: cursor 400ms infinite;
+  animation: cursor 400ms infinite;
+  left: 70%;
+  top: 25%;
+}
+
 /* mini game link appearance */
 a {
   color: #ffd700;
