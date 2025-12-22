@@ -7,6 +7,7 @@
 import * as THREE from "three";
 import Stats from "three/addons/libs/stats.module.js";
 import RAPIER from "@dimforge/rapier3d-compat";
+import { PointerLockControls } from "three/addons/controls/PointerLockControls.js";
 
 //Wait for Rapier to compile
 await RAPIER.init();
@@ -112,6 +113,13 @@ const keys = {
 
 const speed = 10;
 
+const controls = new PointerLockControls(camera, renderer.domElement);
+controls.pointerSpeed = 0.5;
+// Click to lock the mouse and start playing
+document.addEventListener("click", () => {
+  controls.lock();
+});
+
 // Listen for key presses
 window.addEventListener("keydown", (event) => {
   const key = event.key.toLowerCase();
@@ -124,16 +132,26 @@ window.addEventListener("keyup", (event) => {
   if (key in keys) keys[key] = 0;
 });
 
+let bobTimer = 0;
+const BOB_SPEED = 10;
+const BOB_AMOUNT = 0.05;
+
 function animate() {
   requestAnimationFrame(animate);
+
+  const rotation = new THREE.Euler(0, 0, 0, "YXZ");
 
   delta = clock.getDelta();
   world.timestep = Math.min(delta, 0.1);
   world.step();
 
-  let moveDir = new THREE.Vector3(keys.d - keys.a, 0, keys.s - keys.w)
-    .normalize()
-    .multiplyScalar(delta * speed);
+  let moveDir = new THREE.Vector3(keys.d - keys.a, 0, keys.s - keys.w);
+
+  rotation.setFromQuaternion(camera.quaternion);
+  rotation.x = 0; // Lock rotation to the Y axis for movement
+  moveDir.applyEuler(rotation);
+
+  moveDir.normalize().multiplyScalar(delta * speed);
 
   characterController.computeColliderMovement(
     playerCollision.collider(0), // Ensure you pass the collider, not the body
@@ -164,13 +182,16 @@ function animate() {
   const camPos = new THREE.Vector3(
     playerMesh.position + new THREE.Vector3(0, 2, 0)
   );
-  camera.position.copy(
-    new THREE.Vector3(
-      playerMesh.position.x,
-      playerMesh.position.y + 1,
-      playerMesh.position.z
-    )
-  );
+
+  bobTimer += delta * BOB_SPEED;
+
+  // 2. Calculate the bob offset
+  // We use Math.sin(bobTimer) for the up/down motion
+  const bobOffset = Math.sin(bobTimer) * BOB_AMOUNT;
+
+  // SimonDev's trick: The camera height is (Base Height) + (Bob Offset)
+  const baseHeight = 0.8; // Your standard eye-level
+  camera.position.set(t.x, t.y + baseHeight + bobOffset, t.z);
   renderer.render(scene, camera);
 
   stats.update();
