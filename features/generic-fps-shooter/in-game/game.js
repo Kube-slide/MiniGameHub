@@ -37,9 +37,37 @@ window.addEventListener("resize", () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-const light = new THREE.DirectionalLight(0xf3ebbe, 2.4);
-light.position.set(-20, 100, 20);
-light.target.position.set(0, 0, 0);
+const distance = 50.0;
+const angle = Math.PI / 4.0;
+const penumbra = 0.5;
+const decay = 1.0;
+
+let light = new THREE.SpotLight(
+  0xffffff,
+  100.0,
+  distance,
+  angle,
+  penumbra,
+  decay
+);
+light.castShadow = true;
+light.shadow.bias = -0.00001;
+light.shadow.mapSize.width = 4096;
+light.shadow.mapSize.height = 4096;
+light.shadow.camera.near = 1;
+light.shadow.camera.far = 100;
+
+light.position.set(25, 25, 0);
+light.lookAt(0, 0, 0);
+this.scene_.add(light);
+
+const upColour = 0xffff80;
+const downColour = 0x808080;
+light = new THREE.HemisphereLight(upColour, downColour, 0.5);
+light.color.setHSL(0.6, 1, 0.6);
+light.groundColor.setHSL(0.095, 1, 0.75);
+light.position.set(0, 4, 0);
+this.scene_.add(light);
 
 //? Enable stats for debugging
 const stats = new Stats();
