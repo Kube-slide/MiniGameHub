@@ -7,7 +7,6 @@
 import * as THREE from "three";
 import Stats from "three/addons/libs/stats.module.js";
 import RAPIER from "@dimforge/rapier3d-compat";
-import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
 //Wait for Rapier to compile
 await RAPIER.init();
@@ -68,24 +67,6 @@ const texture = loader.load([
 ]);
 scene.background = texture;
 
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.target.set(0, 0, 0);
-
-const sphereRadius = 3;
-const sphereWidthDivisions = 32;
-const sphereHeightDivisions = 16;
-const sphereGeo = new THREE.SphereGeometry(
-  sphereRadius,
-  sphereWidthDivisions,
-  sphereHeightDivisions
-);
-const sphereMat = new THREE.MeshStandardMaterial({ color: "#CA8" });
-const mesh = new THREE.Mesh(sphereGeo, sphereMat);
-mesh.castShadow = true;
-mesh.receiveShadow = true;
-mesh.position.set(0, 4, -10);
-scene.add(mesh);
-
 //? Enable stats for debugging
 const stats = new Stats();
 document.body.appendChild(stats.dom);
@@ -104,6 +85,21 @@ const floorBody = world.createRigidBody(
 const floorShape = RAPIER.ColliderDesc.cuboid(50, 0.5, 50);
 world.createCollider(floorShape, floorBody);
 
+//? Create the player
+const playerMesh = new THREE.Mesh(
+  new THREE.CapsuleGeometry(1, 3, 5),
+  new THREE.MeshStandardMaterial({ color: 0xff0000 })
+);
+playerMesh.castShadow = true;
+playerMesh.position.set(0, 2, -5);
+scene.add(playerMesh);
+const playerCollision = world.createRigidBody(
+  RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(0, 2, -5)
+);
+const playerShape = RAPIER.ColliderDesc.capsule(1.5, 1);
+world.createCollider(playerShape, playerCollision);
+let characterController = world.createCharacterController(0.1);
+
 const clock = new THREE.Clock();
 let delta;
 
@@ -114,10 +110,36 @@ function animate() {
   world.timestep = Math.min(delta, 0.1);
   world.step();
 
+  characterController.computeColliderMovement(
+    playerCollision.collider(0), // Ensure you pass the collider, not the body
+    new RAPIER.Vector3(0, 0.01, 0) // Example: moving slightly down
+  );
+
+  // 2. Get the relative movement result
+  const movement = characterController.computedMovement();
+
+  // 3. Get current absolute position
+  const currentPos = playerCollision.translation();
+
+  // 4. ADD them together to get the NEXT absolute position
+  playerCollision.setNextKinematicTranslation({
+    x: currentPos.x + movement.x,
+    y: currentPos.y + movement.y,
+    z: currentPos.z + movement.z,
+  });
+
+  const t = playerCollision.translation();
+  // 2. Apply it to the Three.js Mesh
+  playerMesh.position.set(t.x, t.y, t.z);
+
+  // 3. Get the rotation (quaternion) from Rapier
+  const r = playerCollision.rotation();
+  // 4. Apply it to the Three.js Mesh
+  playerMesh.quaternion.set(r.x, r.y, r.z, r.w);
+
   renderer.render(scene, camera);
 
   stats.update();
-  controls.update();
 }
 
 animate();
