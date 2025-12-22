@@ -103,6 +103,27 @@ let characterController = world.createCharacterController(0.1);
 const clock = new THREE.Clock();
 let delta;
 
+const keys = {
+  w: 0,
+  a: 0,
+  s: 0,
+  d: 0,
+};
+
+const speed = 10;
+
+// Listen for key presses
+window.addEventListener("keydown", (event) => {
+  const key = event.key.toLowerCase();
+  if (key in keys) keys[key] = 1;
+});
+
+// Listen for key releases
+window.addEventListener("keyup", (event) => {
+  const key = event.key.toLowerCase();
+  if (key in keys) keys[key] = 0;
+});
+
 function animate() {
   requestAnimationFrame(animate);
 
@@ -110,9 +131,13 @@ function animate() {
   world.timestep = Math.min(delta, 0.1);
   world.step();
 
+  let moveDir = new THREE.Vector3(keys.d - keys.a, 0, keys.s - keys.w)
+    .normalize()
+    .multiplyScalar(delta * speed);
+
   characterController.computeColliderMovement(
     playerCollision.collider(0), // Ensure you pass the collider, not the body
-    new RAPIER.Vector3(0, 0.01, 0) // Example: moving slightly down
+    moveDir
   );
 
   // 2. Get the relative movement result
@@ -136,7 +161,16 @@ function animate() {
   const r = playerCollision.rotation();
   // 4. Apply it to the Three.js Mesh
   playerMesh.quaternion.set(r.x, r.y, r.z, r.w);
-
+  const camPos = new THREE.Vector3(
+    playerMesh.position + new THREE.Vector3(0, 2, 0)
+  );
+  camera.position.copy(
+    new THREE.Vector3(
+      playerMesh.position.x,
+      playerMesh.position.y + 1,
+      playerMesh.position.z
+    )
+  );
   renderer.render(scene, camera);
 
   stats.update();
