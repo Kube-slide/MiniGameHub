@@ -28,6 +28,10 @@ export default defineConfig({
           __dirname,
           "features/generic-fps-shooter/lobby.html"
         ),
+        "in-game": resolve(
+          __dirname,
+          "features/generic-fps-shooter/in-game/game.html"
+        ),
       },
     },
   },
