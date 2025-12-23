@@ -230,9 +230,9 @@ const speed = 10;
 const controls = new PointerLockControls(camera, renderer.domElement);
 controls.pointerSpeed = 0.5;
 
-document.addEventListener("click", () => {
-  controls.lock();
-});
+// document.addEventListener("click", () => {
+//   controls.lock();
+// });
 
 window.addEventListener("keydown", (event) => {
   const key = event.key.toLowerCase();
