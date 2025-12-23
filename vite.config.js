@@ -32,10 +32,6 @@ export default defineConfig({
           __dirname,
           "features/generic-fps-shooter/in-game/game.html"
         ),
-        assets: resolve(
-          __dirname,
-          "features/generic-fps-shooter/in-game/assets/"
-        ),
       },
     },
   },

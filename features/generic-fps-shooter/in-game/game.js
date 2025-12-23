@@ -8,8 +8,15 @@ import * as THREE from "three";
 import Stats from "three/addons/libs/stats.module.js";
 import RAPIER from "@dimforge/rapier3d-compat";
 import { PointerLockControls } from "three/addons/controls/PointerLockControls.js";
-import weaponURL from "./assets/weapon.png";
-
+import weaponTex from "./assets/weapon.png";
+import floorTex from "./assets/floorCheck.png";
+import flashTex from "./assets/flash.png";
+import skynx from "./assets/nx.png";
+import skypx from "./assets/px.png";
+import skyny from "./assets/ny.png";
+import skypy from "./assets/py.png";
+import skynz from "./assets/nz.png";
+import skypz from "./assets/pz.png";
 //Wait for Rapier to compile
 await RAPIER.init();
 
@@ -59,14 +66,7 @@ scene.add(Skylight.target);
 
 //? Create the bg
 const loader = new THREE.CubeTextureLoader();
-const texture = loader.load([
-  "./assets/px.png",
-  "./assets/nx.png",
-  "./assets/py.png",
-  "./assets/ny.png",
-  "./assets/pz.png",
-  "./assets/nz.png",
-]);
+const texture = loader.load([skypx, skynx, skypy, skyny, skypz, skynz]);
 scene.background = texture;
 
 //? Enable stats for debugging
@@ -210,7 +210,7 @@ flashSprite.renderOrder = 0;
 
 camera.add(flashSprite);
 
-const map = new THREE.TextureLoader().load("./assets/weapon.png");
+const map = new THREE.TextureLoader().load(weaponTex);
 const material = new THREE.SpriteMaterial({ map: map });
 const sprite = new THREE.Sprite(material);
 sprite.renderOrder = 1;
