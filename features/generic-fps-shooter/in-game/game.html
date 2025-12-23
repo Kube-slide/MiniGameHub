@@ -19,6 +19,23 @@
         <h1>PAUSED</h1>
         <button id="resume-btn">RESUME</button>
         <button id="quit-btn">QUIT</button>
+        <div
+          id="multiplayer-ui"
+          style="
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 100;
+            color: white;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            font-family: sans-serif;
+          "
+        >
+          <div>Your ID: <span id="my-peer-id">Connecting...</span></div>
+          <input type="text" id="friend-id-input" placeholder="Friend's ID" />
+          <button id="connect-btn">Connect to Friend</button>
+        </div>
       </div>
     </div>
   </body>

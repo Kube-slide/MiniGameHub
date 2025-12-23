@@ -17,8 +17,68 @@ import skypy from "./assets/py.png";
 import skynz from "./assets/nz.png";
 import skypz from "./assets/pz.png";
 import enemyTex from "./assets/enemy.png";
+// import { Peer } from "peerjs";
 //Wait for Rapier to compile
 await RAPIER.init();
+
+import { Peer } from "peerjs";
+
+const peer = new Peer();
+let conn = null;
+const remotePlayers = {}; // Stores { mesh, targetPos }
+
+// 1. Setup UI References
+const myIdDisplay = document.getElementById("my-peer-id");
+const friendInput = document.getElementById("friend-id-input");
+const connectBtn = document.getElementById("connect-btn");
+
+// 2. Handle Peer Events
+peer.on("open", (id) => {
+  myIdDisplay.innerText = id;
+});
+
+// Host: Listen for someone connecting to YOU
+peer.on("connection", (connection) => {
+  conn = connection;
+  setupDataListeners();
+  console.log("Connected to: " + connection.peer);
+});
+
+// Client: Connect to a friend
+connectBtn.addEventListener("click", () => {
+  const friendId = friendInput.value;
+  if (friendId) {
+    conn = peer.connect(friendId);
+    setupDataListeners();
+  }
+});
+
+function setupDataListeners() {
+  conn.on("data", (data) => {
+    if (data.type === "move") {
+      updateRemotePlayer(conn.peer, data);
+    }
+  });
+}
+
+function updateRemotePlayer(id, data) {
+  if (!remotePlayers[id]) {
+    // Create visual for the other player
+    const playerTex = new THREE.TextureLoader().load(weaponTex);
+    const mat = new THREE.SpriteMaterial({ map: playerTex, color: 0x00ff00 });
+    const sprite = new THREE.Sprite(mat);
+    sprite.scale.set(2, 2, 1);
+    scene.add(sprite);
+
+    remotePlayers[id] = {
+      mesh: sprite,
+      targetPos: new THREE.Vector3(data.x, data.y, data.z),
+    };
+  } else {
+    // Update destination
+    remotePlayers[id].targetPos.set(data.x, data.y, data.z);
+  }
+}
 
 //? physics init
 const gravity = new RAPIER.Vector3(0, -9.81, 0);
@@ -497,6 +557,23 @@ function animate() {
     // 4. Rotate the visual mesh to look at the player
     enemy.mesh.lookAt(playerPos.x, enemyPos.y, playerPos.z);
   });
+
+  if (conn && conn.open) {
+    const myPos = playerCollision.translation();
+    conn.send({
+      type: "move",
+      x: myPos.x,
+      y: myPos.y,
+      z: myPos.z,
+    });
+  }
+
+  // 2. Smoothly slide remote players to their target
+  for (let id in remotePlayers) {
+    const p = remotePlayers[id];
+    // 0.1 is the smoothing factor (lower = smoother/laggier)
+    p.mesh.position.lerp(p.targetPos, 0.1);
+  }
 
   renderer.render(scene, camera);
 
