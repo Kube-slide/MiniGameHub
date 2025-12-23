@@ -230,10 +230,6 @@ const speed = 10;
 const controls = new PointerLockControls(camera, renderer.domElement);
 controls.pointerSpeed = 0.5;
 
-// document.addEventListener("click", () => {
-//   controls.lock();
-// });
-
 window.addEventListener("keydown", (event) => {
   const key = event.key.toLowerCase();
   if (key in keys) keys[key] = 1;
@@ -271,6 +267,12 @@ controls.addEventListener("unlock", () => {
 
 resumeBtn.addEventListener("click", () => {
   controls.lock();
+});
+
+document.addEventListener("click", () => {
+  if (pauseMenu.style.display === "none") {
+    controls.lock();
+  }
 });
 
 quitBtn.addEventListener("click", () => {
