@@ -8,6 +8,7 @@ import * as THREE from "three";
 import Stats from "three/addons/libs/stats.module.js";
 import RAPIER from "@dimforge/rapier3d-compat";
 import { PointerLockControls } from "three/addons/controls/PointerLockControls.js";
+import weaponURL from "./assets/weapon.png";
 
 //Wait for Rapier to compile
 await RAPIER.init();
@@ -209,7 +210,7 @@ flashSprite.renderOrder = 0;
 
 camera.add(flashSprite);
 
-const map = new THREE.TextureLoader().load("./assets/weapon.png");
+const map = new THREE.TextureLoader().load(weaponURL);
 const material = new THREE.SpriteMaterial({ map: map });
 const sprite = new THREE.Sprite(material);
 sprite.renderOrder = 1;
