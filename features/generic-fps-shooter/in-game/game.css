@@ -83,3 +83,90 @@ button:hover {
   height: 2px; /* Thickness */
   background-color: #00ff00; /* Green */
 }
+
+/* --- Multiplayer UI Additions --- */
+
+/* The container for MP elements */
+.mp-container {
+  text-align: left;
+  margin-top: 10px;
+}
+
+/* "My ID" Section */
+.id-display {
+  background: #111;
+  border: 1px dashed #444;
+  padding: 10px;
+  margin-bottom: 15px;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.id-display small {
+  color: #888;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  font-weight: bold;
+}
+
+#my-peer-id {
+  color: #00ff00; /* bright green for your own ID */
+  font-family: "Courier New", monospace; /* Monospace makes IDs easier to read */
+  letter-spacing: 1px;
+  user-select: all; /* Allows user to click once to select the whole ID */
+  word-break: break-all;
+}
+
+/* The Join Row (Input + Button) */
+.join-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 5px;
+}
+
+#join-id {
+  flex-grow: 1; /* Takes up remaining space */
+  background: #333;
+  border: 1px solid #555;
+  color: white;
+  padding: 10px;
+  font-family: "Lato", sans-serif; /* Use the font you imported */
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+#join-id:focus {
+  border-color: #ff0000; /* Highlight red on focus */
+}
+
+/* Override generic button styles specifically for the Join button */
+.join-row #join-btn {
+  width: auto; /* Don't be 100% width like main buttons */
+  margin: 0; /* Remove generic button margins */
+  padding: 10px 20px;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+/* Status Message Area */
+#status-msg {
+  height: 20px; /* Reserved space so layout doesn't jump */
+  font-size: 0.8rem;
+  color: #aaa;
+  margin-bottom: 10px;
+  font-style: italic;
+}
+
+/* Separator Line */
+hr {
+  border: 0;
+  border-top: 1px solid #444;
+  margin: 20px 0;
+}
+
+/* Optional: Update main font to Lato since you imported it */
+#pause-menu {
+  font-family: "Lato", sans-serif;
+}

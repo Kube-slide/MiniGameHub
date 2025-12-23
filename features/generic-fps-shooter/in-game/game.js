@@ -392,9 +392,9 @@ function fireWeapon() {
   );
   projectileCollision.mass(0.1);
   projectileCollision.applyImpulse(
-    new RAPIER.Vector3(direction.x * 15, direction.y * 15, direction.z * 15),
+    new RAPIER.Vector3(direction.x * 50, direction.y * 50, direction.z * 50), // Changed 15 to 50
     true
-  ); // Increased force
+  );
   const projectileShape = RAPIER.ColliderDesc.ball(0.2).setActiveEvents(
     RAPIER.ActiveEvents.COLLISION_EVENTS
   );
@@ -446,6 +446,9 @@ function spawnEnemy(forcedX, forcedZ, forcedY, forcedId) {
   const z = forcedZ ?? (Math.random() - 0.5) * 40;
   const y = forcedY ?? 2;
 
+  // GENERATE UNIQUE ID (Critical for syncing)
+  const uniqueId = forcedId ?? Math.random().toString(36).substr(2, 9);
+
   const enemyTexture = new THREE.TextureLoader().load(enemyTex);
   const spriteMaterial = new THREE.SpriteMaterial({ map: enemyTexture });
   const enemySprite = new THREE.Sprite(spriteMaterial);
@@ -453,9 +456,15 @@ function spawnEnemy(forcedX, forcedZ, forcedY, forcedId) {
   enemySprite.scale.set(2, 2, 1);
   scene.add(enemySprite);
 
+  // Dynamic body so it can fall/move
   const rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(x, y, z);
+  // Important: Lock rotation so they don't tip over
+  rigidBodyDesc.setRotation({ x: 0, y: 0, z: 0, w: 1 });
   const body = world.createRigidBody(rigidBodyDesc);
   body.mass = 0.1;
+
+  // Lock rotation axis just to be safe
+  body.lockRotations(true, true);
 
   const colliderDesc = RAPIER.ColliderDesc.cuboid(1, 1, 1).setActiveEvents(
     RAPIER.ActiveEvents.COLLISION_EVENTS
@@ -465,16 +474,16 @@ function spawnEnemy(forcedX, forcedZ, forcedY, forcedId) {
   const enemyData = {
     mesh: enemySprite,
     body: body,
-    // Use provided ID or the Rapier handle
-    id: forcedId ?? body.handle,
+    id: uniqueId, // USE THE STRING ID
+    health: 100, // Add HP tracking
     speed: 4 + Math.random() * 4,
     targetPos: new THREE.Vector3(x, y, z),
   };
   enemies.push(enemyData);
   sceneObjects.push([enemySprite, body]);
 
-  // Return data for broadcasting
-  return { x, y, z, id: body.handle };
+  // Return data so Host can broadcast it
+  return { x, y, z, id: uniqueId };
 }
 
 function animate() {
@@ -541,7 +550,23 @@ function animate() {
     );
 
     if (enemyIndex !== -1) {
-      destroyEnemy(enemyIndex);
+      const hitEnemy = enemies[enemyIndex];
+
+      if (isHost()) {
+        // Host applies damage immediately
+        hitEnemy.health -= 25;
+        if (hitEnemy.health <= 0) {
+          destroyEnemy(enemyIndex);
+        }
+      } else {
+        // Client tells Host "I hit this guy"
+        // We do NOT destroy it here. We wait for the Host to delete it via sync.
+        if (connections.length > 0) {
+          // Send to Host (first connection is usually host in this setup, or broadcast)
+          // Ideally send specifically to host, but broadcast works for now:
+          broadcast({ type: "hitEnemy", enemyId: hitEnemy.id });
+        }
+      }
     }
     destroyProjectile(bulletIndex);
   });
@@ -688,4 +713,35 @@ function destroyEnemy(index) {
   const sceneObjIndex = sceneObjects.findIndex((item) => item[1] === e.body);
   if (sceneObjIndex !== -1) sceneObjects.splice(sceneObjIndex, 1);
   enemies.splice(index, 1);
+}
+
+function updateClientEnemies(serverList) {
+  // 1. UPDATE or CREATE enemies
+  serverList.forEach((serverEnemy) => {
+    const localEnemy = enemies.find((e) => e.id === serverEnemy.id);
+
+    if (localEnemy) {
+      // UPDATE: Smoothly move physics body to match host
+      // We force the body position so physics doesn't fight the network
+      localEnemy.body.setTranslation(
+        { x: serverEnemy.x, y: serverEnemy.y, z: serverEnemy.z },
+        true
+      );
+      localEnemy.body.setLinvel({ x: 0, y: 0, z: 0 }, true); // Stop momentum drift
+    } else {
+      // CREATE: It exists on server but not here
+      spawnEnemy(serverEnemy.x, serverEnemy.z, serverEnemy.y, serverEnemy.id);
+    }
+  });
+
+  // 2. DELETE enemies that are gone from the server
+  // Iterate backwards so we can splice safely
+  for (let i = enemies.length - 1; i >= 0; i--) {
+    const localEnemy = enemies[i];
+    const stillAlive = serverList.find((s) => s.id === localEnemy.id);
+
+    if (!stillAlive) {
+      destroyEnemy(i);
+    }
+  }
 }
