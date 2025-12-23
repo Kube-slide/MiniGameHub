@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Document</title>
+    <title>Multiplayer FPS</title>
     <script src="./game.js" type="module" defer></script>
     <link href="./game.css" rel="stylesheet" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -14,29 +14,33 @@
     />
   </head>
   <body>
-    <div id="pause-menu" style="display: none">
+    <div id="pause-menu">
       <div class="menu-card">
         <h1>PAUSED</h1>
-        <button id="resume-btn">RESUME</button>
-        <button id="quit-btn">QUIT</button>
-        <div
-          id="multiplayer-ui"
-          style="
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            z-index: 100;
-            color: white;
-            background: rgba(0, 0, 0, 0.5);
-            padding: 10px;
-            font-family: sans-serif;
-          "
-        >
-          <div>Your ID: <span id="my-peer-id">Connecting...</span></div>
-          <input type="text" id="friend-id-input" placeholder="Friend's ID" />
-          <button id="connect-btn">Connect to Friend</button>
+
+        <div class="mp-container">
+          <div class="id-display">
+            <small>MY ID:</small>
+            <span id="my-peer-id">Generating...</span>
+          </div>
+
+          <div class="join-row">
+            <input
+              type="text"
+              id="join-id"
+              placeholder="Paste Friend's ID Here"
+            />
+            <button id="join-btn">JOIN</button>
+          </div>
+          <div id="status-msg"></div>
         </div>
+
+        <hr />
+
+        <button id="resume-btn" class="primary-btn">RESUME</button>
+        <button id="quit-btn" class="danger-btn">QUIT</button>
       </div>
     </div>
+    <div class="crosshair"></div>
   </body>
 </html>

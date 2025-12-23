@@ -1,12 +1,13 @@
 //* Resources used:
-//* Rapier official js documentation:   https://rapier.rs/docs/user_guides/javascript/character_controller
-//* Threejs official documentation:     https://threejs.org/manual/
-//* SimonDev's fps camera tutorial:     https://www.youtube.com/watch?v=oqKzxPMLWxo
-//* Basic syncing physics + mesh:       https://sbcode.net/threejs/physics-rapier/
+//* Rapier official js documentation:   https://rapier.rs/docs/user_guides/javascript/character_controller
+//* Threejs official documentation:     https://threejs.org/manual/
+//* SimonDev's fps camera tutorial:     https://www.youtube.com/watch?v=oqKzxPMLWxo
+//* Basic syncing physics + mesh:       https://sbcode.net/threejs/physics-rapier/
 import * as THREE from "three";
 import Stats from "three/addons/libs/stats.module.js";
 import RAPIER from "@dimforge/rapier3d-compat";
 import { PointerLockControls } from "three/addons/controls/PointerLockControls.js";
+import { Peer } from "peerjs";
 import weaponTex from "./assets/weapon.png";
 import floorTex from "./assets/floorCheck.png";
 import flashTex from "./assets/flash.png";
@@ -17,66 +18,122 @@ import skypy from "./assets/py.png";
 import skynz from "./assets/nz.png";
 import skypz from "./assets/pz.png";
 import enemyTex from "./assets/enemy.png";
-// import { Peer } from "peerjs";
+
 //Wait for Rapier to compile
 await RAPIER.init();
 
-import { Peer } from "peerjs";
-
+// --- MULTIPLAYER SETUP ---
 const peer = new Peer();
-let conn = null;
-const remotePlayers = {}; // Stores { mesh, targetPos }
+const connections = [];
+const remotePlayers = {};
+const remoteProjectiles = []; // Visual bullets from other players
 
-// 1. Setup UI References
-const myIdDisplay = document.getElementById("my-peer-id");
-const friendInput = document.getElementById("friend-id-input");
-const connectBtn = document.getElementById("connect-btn");
+// Helper: Am I the host? (First person in the list is host)
+function isHost() {
+  if (connections.length === 0) return true;
+  const allIds = connections.map((c) => c.peer);
+  allIds.push(peer.id);
+  allIds.sort();
+  return allIds[0] === peer.id;
+}
 
-// 2. Handle Peer Events
-peer.on("open", (id) => {
-  myIdDisplay.innerText = id;
+// Helper: Send data to everyone
+function broadcast(data) {
+  connections.forEach((conn) => {
+    if (conn.open) conn.send(data);
+  });
+}
+
+// 1. Connect to Peer
+function connectToPeer(id) {
+  if (id === peer.id || connections.find((c) => c.peer === id)) return;
+  const conn = peer.connect(id);
+  setupConnection(conn);
+}
+
+peer.on("connection", (conn) => {
+  setupConnection(conn);
 });
 
-// Host: Listen for someone connecting to YOU
-peer.on("connection", (connection) => {
-  conn = connection;
-  setupDataListeners();
-  console.log("Connected to: " + connection.peer);
-});
+function setupConnection(conn) {
+  conn.on("open", () => {
+    if (!connections.find((c) => c.peer === conn.peer)) {
+      connections.push(conn);
+      console.log("Connected to", conn.peer);
 
-// Client: Connect to a friend
-connectBtn.addEventListener("click", () => {
-  const friendId = friendInput.value;
-  if (friendId) {
-    conn = peer.connect(friendId);
-    setupDataListeners();
-  }
-});
+      // If I am host, send the peer list to the new guy so they connect to everyone else
+      if (isHost()) {
+        const others = connections
+          .map((c) => c.peer)
+          .filter((id) => id !== conn.peer);
+        conn.send({ type: "peerList", list: others });
 
-function setupDataListeners() {
-  conn.on("data", (data) => {
-    if (data.type === "move") {
-      updateRemotePlayer(conn.peer, data);
+        // Also sync existing enemies to the new player
+        const enemyList = enemies.map((e) => ({
+          id: e.body.handle,
+          x: e.body.translation().x,
+          y: e.body.translation().y,
+          z: e.body.translation().z,
+        }));
+        conn.send({ type: "enemySync", list: enemyList });
+      }
+    }
+  });
+
+  conn.on("data", (data) => handleData(data, conn.peer));
+
+  conn.on("close", () => {
+    const idx = connections.findIndex((c) => c.peer === conn.peer);
+    if (idx !== -1) connections.splice(idx, 1);
+    // Remove their visual mesh
+    if (remotePlayers[conn.peer]) {
+      scene.remove(remotePlayers[conn.peer].mesh);
+      delete remotePlayers[conn.peer];
     }
   });
 }
 
-function updateRemotePlayer(id, data) {
-  if (!remotePlayers[id]) {
-    // Create visual for the other player
-    const playerTex = new THREE.TextureLoader().load(weaponTex);
-    const mat = new THREE.SpriteMaterial({ map: playerTex, color: 0x00ff00 });
-    const sprite = new THREE.Sprite(mat);
-    sprite.scale.set(2, 2, 1);
-    scene.add(sprite);
-
-    remotePlayers[id] = {
-      mesh: sprite,
-      targetPos: new THREE.Vector3(data.x, data.y, data.z),
-    };
-  } else {
-    // Update destination
-    remotePlayers[id].targetPos.set(data.x, data.y, data.z);
+function handleData(data, senderId) {
+  switch (data.type) {
+    case "peerList":
+      data.list.forEach((id) => connectToPeer(id));
+      break;
+    case "move":
+      if (!remotePlayers[senderId]) {
+        // Create new player sprite
+        const tex = new THREE.TextureLoader().load(weaponTex);
+        const sprite = new THREE.Sprite(
+          new THREE.SpriteMaterial({ map: tex, color: 0x00ff00 })
+        ); // Green tint for friends
+        sprite.scale.set(2, 2, 1);
+        scene.add(sprite);
+        remotePlayers[senderId] = {
+          mesh: sprite,
+          targetPos: new THREE.Vector3(),
+        };
+      }
+      remotePlayers[senderId].targetPos.set(data.x, data.y, data.z);
+      break;
+    case "shoot":
+      // Spawn a visual bullet coming from the other player
+      spawnRemoteBullet(data.pos, data.vel);
+      break;
+    case "spawnEnemy":
+      // Client receives command to spawn enemy
+      if (!isHost()) spawnEnemy(data.x, data.z, data.y, data.id);
+      break;
+    case "enemySync":
+      // Client receives positions of all enemies
+      if (!isHost()) {
+        data.list.forEach((syncData) => {
+          // Match by Rapier Handle ID
+          const enemy = enemies.find((e) => e.id === syncData.id);
+          if (enemy) {
+            enemy.targetPos.set(syncData.x, syncData.y, syncData.z);
+          }
+        });
+      }
+      break;
   }
 }
 
@@ -235,11 +292,11 @@ window.addEventListener("keydown", (event) => {
   if (key in keys) keys[key] = 1;
 });
 
+// HOST ONLY SPAWN TIMER
 setInterval(() => {
-  // Only spawn if the game is active (optional check)
-  if (controls.isLocked) {
-    spawnEnemy();
-    console.log("A new enemy has entered the arena!");
+  if (controls.isLocked && isHost()) {
+    const data = spawnEnemy();
+    broadcast({ type: "spawnEnemy", ...data });
   }
 }, Math.random() * (5000 - 1500) + 1500);
 
@@ -253,9 +310,23 @@ let yVel = 0;
 const BOB_SPEED = 10;
 const BOB_AMOUNT = 0.05;
 
+// --- INJECT UI INTO PAUSE MENU ---
 const pauseMenu = document.getElementById("pause-menu");
 const resumeBtn = document.getElementById("resume-btn");
 const quitBtn = document.getElementById("quit-btn");
+
+peer.on("open", (id) => {
+  document.getElementById("my-peer-id").innerText = id;
+});
+
+document.getElementById("join-btn").addEventListener("click", () => {
+  const id = document.getElementById("join-id").value;
+  if (id) {
+    connectToPeer(id);
+    document.getElementById("status-msg").innerText = "Connecting...";
+  }
+});
+// ---------------------------------
 
 controls.addEventListener("lock", () => {
   pauseMenu.style.display = "none";
@@ -298,6 +369,15 @@ function fireWeapon() {
   // 3. Optional: Add a tiny "recoil" to the gun sprite
   sprite.position.z += 0.05;
 
+  const direction = new THREE.Vector3();
+  camera.getWorldDirection(direction);
+
+  // Calculate spawn pos slightly in front of camera
+  const spawnPos = camera.position
+    .clone()
+    .add(direction.clone().multiplyScalar(1));
+
+  // --- LOCAL PHYSICS BULLET ---
   const newProjectile = new THREE.Mesh(
     new THREE.SphereGeometry(0.5, 10),
     new THREE.MeshStandardMaterial({ color: 0xff0000 })
@@ -305,72 +385,96 @@ function fireWeapon() {
 
   const projectileCollision = world.createRigidBody(
     RAPIER.RigidBodyDesc.dynamic().setTranslation(
-      camera.position.x + flashSprite.position.x,
-      camera.position.y,
-      camera.position.z + flashSprite.position.z
+      spawnPos.x,
+      spawnPos.y,
+      spawnPos.z
     )
   );
   projectileCollision.mass(0.1);
-  projectileCollision.applyImpulse(new RAPIER.Vector3(0, 10, 0), true);
+  projectileCollision.applyImpulse(
+    new RAPIER.Vector3(direction.x * 15, direction.y * 15, direction.z * 15),
+    true
+  ); // Increased force
   const projectileShape = RAPIER.ColliderDesc.ball(0.2).setActiveEvents(
     RAPIER.ActiveEvents.COLLISION_EVENTS
   );
   world.createCollider(projectileShape, projectileCollision);
 
   newProjectile.receiveShadow = true;
-  const projectileSpawnLocation = new THREE.Vector3(
-    camera.position.x + flashSprite.position.x,
-    camera.position.y,
-    camera.position.z + flashSprite.position.z
-  );
-  newProjectile.position.copy(projectileSpawnLocation);
+  newProjectile.position.copy(spawnPos);
   scene.add(newProjectile);
 
   sceneObjects.push([newProjectile, projectileCollision]);
-  projectiles.push({ mesh: newProjectile, body: projectileCollision });
+  projectiles.push({
+    mesh: newProjectile,
+    body: projectileCollision,
+    direction: direction.clone(),
+  });
 
   // 4. Hide it after a tiny delay
   setTimeout(() => {
     flashSprite.visible = false;
     sprite.position.z -= 0.05; // Return gun from recoil
   }, 50);
+
+  // --- NETWORK SYNC ---
+  broadcast({
+    type: "shoot",
+    pos: { x: spawnPos.x, y: spawnPos.y, z: spawnPos.z },
+    vel: { x: direction.x * 15, y: direction.y * 15, z: direction.z * 15 },
+  });
 }
 
-function spawnEnemy() {
-  const x = (Math.random() - 0.5) * 40;
-  const z = (Math.random() - 0.5) * 40;
-  const y = 2; // Start slightly higher since sprites pivot from the center
+function spawnRemoteBullet(pos, vel) {
+  const mesh = new THREE.Mesh(
+    new THREE.SphereGeometry(0.3, 8, 8),
+    new THREE.MeshBasicMaterial({ color: 0xffff00 })
+  );
+  mesh.position.set(pos.x, pos.y, pos.z);
+  scene.add(mesh);
 
-  // 1. Create the Sprite
-  // Use your weapon texture or load a new one
+  // Store simple physics data for the loop to animate it
+  remoteProjectiles.push({
+    mesh: mesh,
+    vel: new THREE.Vector3(vel.x, vel.y, vel.z),
+    spawnTime: Date.now(),
+  });
+}
+
+function spawnEnemy(forcedX, forcedZ, forcedY, forcedId) {
+  const x = forcedX ?? (Math.random() - 0.5) * 40;
+  const z = forcedZ ?? (Math.random() - 0.5) * 40;
+  const y = forcedY ?? 2;
+
   const enemyTexture = new THREE.TextureLoader().load(enemyTex);
   const spriteMaterial = new THREE.SpriteMaterial({ map: enemyTexture });
   const enemySprite = new THREE.Sprite(spriteMaterial);
 
-  // Scale it up so it's visible (Sprites are 1x1 by default)
   enemySprite.scale.set(2, 2, 1);
   scene.add(enemySprite);
 
-  // 2. Physics Body (Keep the Cuboid or use a Ball for smoother sliding)
   const rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(x, y, z);
   const body = world.createRigidBody(rigidBodyDesc);
   body.mass = 0.1;
 
-  // We keep the cuboid collider so it stands on the floor correctly
   const colliderDesc = RAPIER.ColliderDesc.cuboid(1, 1, 1).setActiveEvents(
     RAPIER.ActiveEvents.COLLISION_EVENTS
   );
   world.createCollider(colliderDesc, body);
 
-  // 3. Store for AI and Syncing
   const enemyData = {
-    mesh: enemySprite, // We treat the sprite as the "mesh" now
+    mesh: enemySprite,
     body: body,
+    // Use provided ID or the Rapier handle
+    id: forcedId ?? body.handle,
     speed: 4 + Math.random() * 4,
+    targetPos: new THREE.Vector3(x, y, z),
   };
-
-  sceneObjects.push([enemySprite, body]);
   enemies.push(enemyData);
+  sceneObjects.push([enemySprite, body]);
+
+  // Return data for broadcasting
+  return { x, y, z, id: body.handle };
 }
 
 function animate() {
@@ -381,204 +485,182 @@ function animate() {
   delta = clock.getDelta();
   world.timestep = Math.min(delta, 0.1);
 
-  // Find your projectiles.forEach loop and update it:
+  // Update LOCAL projectiles
   projectiles.forEach((obj) => {
-    const bulletBody = obj.body; // Access the body property
-    const direction = new THREE.Vector3();
-    camera.getWorldDirection(direction);
+    const bulletBody = obj.body;
 
-    // Use bulletBody instead of bulletCollision
-    bulletBody.applyImpulse(
-      new RAPIER.Vector3(
-        direction.x * 0.1,
-        direction.y * 0.1,
-        direction.z * 0.1
-      ),
-      true
-    );
+    // Use a small multiplier (e.g., 0.5) so it doesn't accelerate to infinity instantly
+    const force = obj.direction.clone().multiplyScalar(0.5);
+
+    // Apply the impulse using the stored direction
+    bulletBody.applyImpulse({ x: force.x, y: force.y, z: force.z }, true);
   });
+
+  // Update REMOTE projectiles (Simple visual movement)
+  for (let i = remoteProjectiles.length - 1; i >= 0; i--) {
+    const p = remoteProjectiles[i];
+    p.mesh.position.addScaledVector(p.vel, delta);
+    // Remove after 2 seconds
+    if (Date.now() - p.spawnTime > 2000) {
+      scene.remove(p.mesh);
+      remoteProjectiles.splice(i, 1);
+    }
+  }
 
   world.step(eventQueue);
 
   eventQueue.drainCollisionEvents((handle1, handle2, started) => {
-    if (!started) {
-      return;
-    }
+    if (!started) return;
 
     let bulletIndex = -1;
     let hitHandle = null;
 
-    // 1. Check if handle1 is a bullet
     const p1Index = projectiles.findIndex(
       (p) => p.body.collider(0).handle === handle1
     );
     if (p1Index !== -1) {
       bulletIndex = p1Index;
-      hitHandle = handle2; // The other thing we hit
+      hitHandle = handle2;
     }
 
-    // 2. If not, check if handle2 is a bullet
     if (bulletIndex === -1) {
       const p2Index = projectiles.findIndex(
         (p) => p.body.collider(0).handle === handle2
       );
       if (p2Index !== -1) {
         bulletIndex = p2Index;
-        hitHandle = handle1; // The other thing we hit
+        hitHandle = handle1;
       }
     }
 
-    // If no bullet was involved in this collision, we don't care
     if (bulletIndex === -1) return;
-
-    // 3. Safety Check: Did we shoot ourselves?
-    // If the thing we hit is the player, ignore it.
     if (playerCollision.collider(0).handle === hitHandle) return;
 
-    // 4. Check if the thing we hit was an enemy
     const enemyIndex = enemies.findIndex(
       (e) => e.body.collider(0).handle === hitHandle
     );
 
     if (enemyIndex !== -1) {
-      destroyEnemy(enemyIndex); // Hit an enemy! Kill them.
+      destroyEnemy(enemyIndex);
     }
-
-    // 5. Finally, destroy the bullet (because it hit SOMETHING: wall, floor, or enemy)
     destroyProjectile(bulletIndex);
   });
 
+  // --- PLAYER MOVEMENT ---
   const moveDir = new THREE.Vector3(keys.d - keys.a, 0, keys.s - keys.w);
-
   rotation.setFromQuaternion(camera.quaternion);
-  rotation.x = 0; // Lock rotation to the Y axis for movement
+  rotation.x = 0;
   moveDir.applyEuler(rotation);
   moveDir.normalize().multiplyScalar(delta * speed);
+
   if (characterController.computedGrounded()) {
-    // We are on the floor.
-    if (keys[" "] === 1) {
-      yVel = 15;
-    } else {
-      yVel = -0.5;
-    }
+    if (keys[" "] === 1) yVel = 15;
+    else yVel = -0.5;
   } else {
     yVel -= 25 * delta;
   }
 
   const finalMove = new THREE.Vector3(moveDir.x, yVel * delta, moveDir.z);
-
   characterController.computeColliderMovement(
-    playerCollision.collider(0), // Ensure you pass the collider, not the body
+    playerCollision.collider(0),
     finalMove
   );
-
-  // 2. Get the relative movement result
   const movement = characterController.computedMovement();
-
-  // 3. Get current absolute position
   const currentPos = playerCollision.translation();
 
-  // 4. ADD them together to get the NEXT absolute position
   playerCollision.setNextKinematicTranslation({
     x: currentPos.x + movement.x,
     y: currentPos.y + movement.y,
     z: currentPos.z + movement.z,
   });
 
+  // Broadcast my movement
+  if (connections.length > 0) {
+    broadcast({
+      type: "move",
+      x: currentPos.x,
+      y: currentPos.y,
+      z: currentPos.z,
+    });
+  }
+
+  // --- SYNC OBJECTS TO PHYSICS ---
   sceneObjects.forEach(([objMesh, objCollision]) => {
     const t = objCollision.translation();
-    // 2. Apply it to the Three.js Mesh
     objMesh.position.set(t.x, t.y, t.z);
 
-    // 3. Get the rotation (quaternion) from Rapier
+    // Rotation
     const r = objCollision.rotation();
-    // 4. Apply it to the Three.js Mesh
     objMesh.quaternion.set(r.x, r.y, r.z, r.w);
 
     const enemyRef = enemies.find((e) => e.body === objCollision);
-
     if (enemyRef) {
-      // Apply smooth sine-wave bobbing
-      // Adjust 0.005 for speed and 0.3 for height
+      // If I am NOT the host, override the physics position with the synced position
+      if (!isHost()) {
+        objMesh.position.lerp(enemyRef.targetPos, 0.2);
+      }
+      // Bobbing
       const bob = Math.sin(Date.now() * 0.005) * 0.3;
-
-      // Update sprite position: Physics Position + Bob Offset
-      objMesh.position.set(t.x, t.y + bob, t.z);
+      objMesh.position.y += bob;
     }
   });
 
+  // --- SYNC REMOTE PLAYERS ---
+  for (const id in remotePlayers) {
+    const rp = remotePlayers[id];
+    rp.mesh.position.lerp(rp.targetPos, 0.2); // Smooth movement
+  }
+
   bobTimer += delta * BOB_SPEED;
-
-  // 2. Calculate the bob offset
-  // We use Math.sin(bobTimer) for the up/down motion
   const bobOffset = Math.sin(bobTimer) * BOB_AMOUNT;
-
-  // SimonDev's trick: The camera height is (Base Height) + (Bob Offset)
-  const baseHeight = 0.8; // Your standard eye-level
+  const baseHeight = 0.8;
   camera.position.set(
     playerCollision.translation().x,
     playerCollision.translation().y + baseHeight + bobOffset,
     playerCollision.translation().z
   );
-  const weaponBobX = Math.cos(bobTimer * 0.5) * 0.02; // Side to side
-  const weaponBobY = Math.sin(bobTimer) * 0.02; // Up and down
 
-  // 0.75 and -0.5 are your original offset values
+  const weaponBobX = Math.cos(bobTimer * 0.5) * 0.02;
+  const weaponBobY = Math.sin(bobTimer) * 0.02;
   sprite.position.x = 0.75 + weaponBobX;
   sprite.position.y = -0.35 + weaponBobY;
 
-  // Get player position once per frame to save calculations
-  const playerPos = playerCollision.translation();
+  // --- HOST AI LOGIC ---
+  if (isHost()) {
+    const playerPos = playerCollision.translation();
+    enemies.forEach((enemy) => {
+      const enemyPos = enemy.body.translation();
+      const direction = new THREE.Vector3(
+        playerPos.x - enemyPos.x,
+        0,
+        playerPos.z - enemyPos.z
+      );
+      direction.normalize();
+      const currentLinVel = enemy.body.linvel();
 
-  enemies.forEach((enemy) => {
-    const enemyPos = enemy.body.translation();
-
-    // 1. Calculate direction vector (Player - Enemy)
-    const direction = new THREE.Vector3(
-      playerPos.x - enemyPos.x,
-      0, // Ignore Y so they don't try to fly up/down to you
-      playerPos.z - enemyPos.z
-    );
-
-    // 2. Normalize calculates the "steering" direction
-    direction.normalize();
-
-    // 3. Move the enemy (Velocity = Direction * Speed)
-    // We preserve the enemy's current Y velocity (gravity)
-    const currentLinVel = enemy.body.linvel();
-
-    enemy.body.setLinvel(
-      {
-        x: direction.x * enemy.speed,
-        y: currentLinVel.y, // Keep gravity working
-        z: direction.z * enemy.speed,
-      },
-      true
-    );
-
-    // 4. Rotate the visual mesh to look at the player
-    enemy.mesh.lookAt(playerPos.x, enemyPos.y, playerPos.z);
-  });
-
-  if (conn && conn.open) {
-    const myPos = playerCollision.translation();
-    conn.send({
-      type: "move",
-      x: myPos.x,
-      y: myPos.y,
-      z: myPos.z,
+      enemy.body.setLinvel(
+        {
+          x: direction.x * enemy.speed,
+          y: currentLinVel.y,
+          z: direction.z * enemy.speed,
+        },
+        true
+      );
+      // LookAt is handled by Sprite always facing camera, so simpler here
     });
-  }
 
-  // 2. Smoothly slide remote players to their target
-  for (let id in remotePlayers) {
-    const p = remotePlayers[id];
-    // 0.1 is the smoothing factor (lower = smoother/laggier)
-    p.mesh.position.lerp(p.targetPos, 0.1);
+    // Broadcast Enemy Positions
+    const enemySyncList = enemies.map((e) => ({
+      id: e.id,
+      x: e.body.translation().x,
+      y: e.body.translation().y,
+      z: e.body.translation().z,
+    }));
+    if (enemies.length > 0)
+      broadcast({ type: "enemySync", list: enemySyncList });
   }
 
   renderer.render(scene, camera);
-
   stats.update();
 }
 
@@ -586,42 +668,24 @@ animate();
 
 function destroyProjectile(index) {
   const p = projectiles[index];
-
-  // 1. Remove from Three.js Scene
   scene.remove(p.mesh);
-  p.mesh.geometry.dispose(); // Good practice for memory
+  p.mesh.geometry.dispose();
   p.mesh.material.dispose();
-
-  // 2. Remove from Rapier World
   world.removeRigidBody(p.body);
 
-  // 3. Remove from sceneObjects (to stop the sync loop from crashing)
   const sceneObjIndex = sceneObjects.findIndex((item) => item[1] === p.body);
-  if (sceneObjIndex !== -1) {
-    sceneObjects.splice(sceneObjIndex, 1);
-  }
-
-  // 4. Remove from projectiles array
+  if (sceneObjIndex !== -1) sceneObjects.splice(sceneObjIndex, 1);
   projectiles.splice(index, 1);
 }
 
 function destroyEnemy(index) {
   const e = enemies[index];
-
-  // 1. Remove from Three.js Scene
   scene.remove(e.mesh);
   e.mesh.geometry.dispose();
   e.mesh.material.dispose();
-
-  // 2. Remove from Rapier World
   world.removeRigidBody(e.body);
 
-  // 3. Remove from sceneObjects
   const sceneObjIndex = sceneObjects.findIndex((item) => item[1] === e.body);
-  if (sceneObjIndex !== -1) {
-    sceneObjects.splice(sceneObjIndex, 1);
-  }
-
-  // 4. Remove from enemies array
+  if (sceneObjIndex !== -1) sceneObjects.splice(sceneObjIndex, 1);
   enemies.splice(index, 1);
 }

@@ -49,3 +49,37 @@ button:hover {
   background: white;
   color: black;
 }
+
+.crosshair {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  /* Brings the exact center of the element to the middle */
+  transform: translate(-50%, -50%);
+  /* CRITICAL: Allows clicks to pass through the crosshair */
+  pointer-events: none;
+}
+
+/* The Vertical Line */
+.crosshair::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 2px; /* Thickness */
+  height: 20px; /* Length */
+  background-color: #00ff00; /* Green */
+}
+
+/* The Horizontal Line */
+.crosshair::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 20px; /* Length */
+  height: 2px; /* Thickness */
+  background-color: #00ff00; /* Green */
+}
