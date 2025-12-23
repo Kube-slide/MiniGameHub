@@ -104,7 +104,7 @@ function handleData(data, senderId) {
         const tex = new THREE.TextureLoader().load(weaponTex);
         const sprite = new THREE.Sprite(
           new THREE.SpriteMaterial({ map: tex, color: 0x00ff00 })
-        ); // Green tint for friends
+        );
         sprite.scale.set(2, 2, 1);
         scene.add(sprite);
         remotePlayers[senderId] = {
@@ -114,24 +114,35 @@ function handleData(data, senderId) {
       }
       remotePlayers[senderId].targetPos.set(data.x, data.y, data.z);
       break;
+
     case "shoot":
-      // Spawn a visual bullet coming from the other player
       spawnRemoteBullet(data.pos, data.vel);
       break;
-    case "spawnEnemy":
-      // Client receives command to spawn enemy
-      if (!isHost()) spawnEnemy(data.x, data.z, data.y, data.id);
-      break;
+
+    // --- CRITICAL FIX HERE ---
     case "enemySync":
-      // Client receives positions of all enemies
+      // If I am a client (not the host), run the full sync logic
       if (!isHost()) {
-        data.list.forEach((syncData) => {
-          // Match by Rapier Handle ID
-          const enemy = enemies.find((e) => e.id === syncData.id);
-          if (enemy) {
-            enemy.targetPos.set(syncData.x, syncData.y, syncData.z);
+        updateClientEnemies(data.list);
+      }
+      break;
+    // -------------------------
+
+    case "spawnEnemy":
+      // IGNORE THIS NOW.
+      // We rely on enemySync to create enemies to avoid duplicates.
+      break;
+
+    case "hitEnemy":
+      if (isHost()) {
+        const target = enemies.find((e) => e.id === data.enemyId);
+        if (target) {
+          target.health -= 25;
+          if (target.health <= 0) {
+            const idx = enemies.indexOf(target);
+            destroyEnemy(idx);
           }
-        });
+        }
       }
       break;
   }
@@ -617,17 +628,6 @@ function animate() {
     // Rotation
     const r = objCollision.rotation();
     objMesh.quaternion.set(r.x, r.y, r.z, r.w);
-
-    const enemyRef = enemies.find((e) => e.body === objCollision);
-    if (enemyRef) {
-      // If I am NOT the host, override the physics position with the synced position
-      if (!isHost()) {
-        objMesh.position.lerp(enemyRef.targetPos, 0.2);
-      }
-      // Bobbing
-      const bob = Math.sin(Date.now() * 0.005) * 0.3;
-      objMesh.position.y += bob;
-    }
   });
 
   // --- SYNC REMOTE PLAYERS ---
@@ -680,6 +680,7 @@ function animate() {
       x: e.body.translation().x,
       y: e.body.translation().y,
       z: e.body.translation().z,
+      hp: e.health,
     }));
     if (enemies.length > 0)
       broadcast({ type: "enemySync", list: enemySyncList });
@@ -721,15 +722,22 @@ function updateClientEnemies(serverList) {
     const localEnemy = enemies.find((e) => e.id === serverEnemy.id);
 
     if (localEnemy) {
-      // UPDATE: Smoothly move physics body to match host
-      // We force the body position so physics doesn't fight the network
-      localEnemy.body.setTranslation(
-        { x: serverEnemy.x, y: serverEnemy.y, z: serverEnemy.z },
-        true
-      );
-      localEnemy.body.setLinvel({ x: 0, y: 0, z: 0 }, true); // Stop momentum drift
+      // Sync Position
+      localEnemy.body.setNextKinematicTranslation({
+        x: serverEnemy.x,
+        y: serverEnemy.y,
+        z: serverEnemy.z,
+      });
+
+      // Sync Health
+      localEnemy.health = serverEnemy.hp; // <--- ADD THIS
+
+      // Optional: Visual Damage Feedback
+      // Make them redder as they die
+      if (localEnemy.health < 100) {
+        localEnemy.mesh.material.color.setHex(0xff0000);
+      }
     } else {
-      // CREATE: It exists on server but not here
       spawnEnemy(serverEnemy.x, serverEnemy.z, serverEnemy.y, serverEnemy.id);
     }
   });
