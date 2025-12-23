@@ -4,7 +4,7 @@
 
 Project bio
 
-**👉 Live Site:** https://your-live-site-url.com (more on this soon)
+**👉 Live Site:** https://kube-slide.github.io/MiniGameHub/
 
 ## Resources 🔗
 
