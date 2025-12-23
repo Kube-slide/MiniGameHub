@@ -3,11 +3,13 @@
 //* Threejs official documentation:     https://threejs.org/manual/
 //* SimonDev's fps camera tutorial:     https://www.youtube.com/watch?v=oqKzxPMLWxo
 //* Basic syncing physics + mesh:       https://sbcode.net/threejs/physics-rapier/
+//? Project imports
 import * as THREE from "three";
 import Stats from "three/addons/libs/stats.module.js";
 import RAPIER from "@dimforge/rapier3d-compat";
 import { PointerLockControls } from "three/addons/controls/PointerLockControls.js";
 import { Peer } from "peerjs";
+//? Asset imports
 import weaponTex from "./assets/weapon.png";
 import floorTex from "./assets/floorCheck.png";
 import flashTex from "./assets/flash.png";
@@ -305,7 +307,7 @@ window.addEventListener("keydown", (event) => {
 
 // HOST ONLY SPAWN TIMER
 setInterval(() => {
-  if (controls.isLocked && isHost()) {
+  if (isHost()) {
     const data = spawnEnemy();
     broadcast({ type: "spawnEnemy", ...data });
   }
