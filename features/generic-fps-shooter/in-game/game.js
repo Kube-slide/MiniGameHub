@@ -8,8 +8,9 @@ import * as THREE from "three";
 import Stats from "three/addons/libs/stats.module.js";
 import RAPIER from "@dimforge/rapier3d-compat";
 import { PointerLockControls } from "three/addons/controls/PointerLockControls.js";
-import weaponURL from "./assets/weapon.png";
 
+const BaseUrl = import.meta.env.BASE_URL;
+const assetUrl = `${BaseUrl}/features/generic-fps-shooter/in-game/assets/`;
 //Wait for Rapier to compile
 await RAPIER.init();
 
@@ -60,7 +61,7 @@ scene.add(Skylight.target);
 //? Create the bg
 const loader = new THREE.CubeTextureLoader();
 const texture = loader.load([
-  "./assets/px.png",
+  `${assetUrl}px.png`,
   "./assets/nx.png",
   "./assets/py.png",
   "./assets/ny.png",
@@ -75,7 +76,7 @@ document.body.appendChild(stats.dom);
 
 //? Create the floor
 const textLoad = new THREE.TextureLoader();
-const floorTexture = textLoad.load("./assets/floorCheck.png");
+const floorTexture = textLoad.load(`${assetUrl}floorCheck.png`);
 floorTexture.wrapS = THREE.RepeatWrapping;
 floorTexture.wrapT = THREE.RepeatWrapping;
 floorTexture.magFilter = THREE.NearestFilter;
@@ -210,7 +211,7 @@ flashSprite.renderOrder = 0;
 
 camera.add(flashSprite);
 
-const map = new THREE.TextureLoader().load(weaponURL);
+const map = new THREE.TextureLoader().load(`${assetUrl}weapon.png`);
 const material = new THREE.SpriteMaterial({ map: map });
 const sprite = new THREE.Sprite(material);
 sprite.renderOrder = 1;
