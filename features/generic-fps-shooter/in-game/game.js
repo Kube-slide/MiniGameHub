@@ -75,7 +75,7 @@ document.body.appendChild(stats.dom);
 
 //? Create the floor
 const textLoad = new THREE.TextureLoader();
-const floorTexture = textLoad.load("./assets/floorCheck.png");
+const floorTexture = textLoad.load(floorTex);
 floorTexture.wrapS = THREE.RepeatWrapping;
 floorTexture.wrapT = THREE.RepeatWrapping;
 floorTexture.magFilter = THREE.NearestFilter;
@@ -184,7 +184,7 @@ quitBtn.addEventListener("click", () => {
 });
 
 // 1. Load Muzzle Flash Texture
-const flashMap = new THREE.TextureLoader().load("./assets/flash.png");
+const flashMap = new THREE.TextureLoader().load(flashTex);
 const flashMaterial = new THREE.SpriteMaterial({
   map: flashMap,
   transparent: true,
