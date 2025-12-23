@@ -16,6 +16,7 @@ import skyny from "./assets/ny.png";
 import skypy from "./assets/py.png";
 import skynz from "./assets/nz.png";
 import skypz from "./assets/pz.png";
+import enemyTex from "./assets/enemy.png";
 //Wait for Rapier to compile
 await RAPIER.init();
 
@@ -25,6 +26,7 @@ const world = new RAPIER.World(gravity);
 const eventQueue = new RAPIER.EventQueue(true);
 const sceneObjects = [];
 const projectiles = [];
+const enemies = [];
 
 //? Threejs init
 const scene = new THREE.Scene();
@@ -119,6 +121,7 @@ async function LoadScene() {
   playerCollision = world.createRigidBody(
     RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(0, 2, -5)
   );
+  playerCollision.setAdditionalMass(1000);
   const playerShape = RAPIER.ColliderDesc.capsule(1.5, 1);
   world.createCollider(playerShape, playerCollision);
   sceneObjects.push([playerMesh, playerCollision]);
@@ -174,10 +177,15 @@ document.addEventListener("click", () => {
 window.addEventListener("keydown", (event) => {
   const key = event.key.toLowerCase();
   if (key in keys) keys[key] = 1;
-  if (key === "q") {
-    spawnEnemy();
-  }
 });
+
+setInterval(() => {
+  // Only spawn if the game is active (optional check)
+  if (controls.isLocked) {
+    spawnEnemy();
+    console.log("A new enemy has entered the arena!");
+  }
+}, Math.random() * (5000 - 1500) + 1500);
 
 window.addEventListener("keyup", (event) => {
   const key = event.key.toLowerCase();
@@ -257,7 +265,7 @@ function fireWeapon() {
   scene.add(newProjectile);
 
   sceneObjects.push([newProjectile, projectileCollision]);
-  projectiles.push(projectileCollision);
+  projectiles.push({ mesh: newProjectile, body: projectileCollision });
 
   // 4. Hide it after a tiny delay
   setTimeout(() => {
@@ -267,30 +275,40 @@ function fireWeapon() {
 }
 
 function spawnEnemy() {
-  // 1. Random position near the player (e.g., within 20 units)
   const x = (Math.random() - 0.5) * 40;
   const z = (Math.random() - 0.5) * 40;
-  const y = 10; // Drop them from the sky
+  const y = 2; // Start slightly higher since sprites pivot from the center
 
-  // 2. Three.js Visuals
-  const geometry = new THREE.BoxGeometry(2, 2, 2);
-  const material = new THREE.MeshStandardMaterial({ color: 0x00ff00 }); // Green for enemies
-  const mesh = new THREE.Mesh(geometry, material);
-  mesh.castShadow = true;
-  scene.add(mesh);
+  // 1. Create the Sprite
+  // Use your weapon texture or load a new one
+  const enemyTexture = new THREE.TextureLoader().load(enemyTex);
+  const spriteMaterial = new THREE.SpriteMaterial({ map: enemyTexture });
+  const enemySprite = new THREE.Sprite(spriteMaterial);
 
-  // 3. Rapier Physics (Dynamic so they fall and get hit)
+  // Scale it up so it's visible (Sprites are 1x1 by default)
+  enemySprite.scale.set(2, 2, 1);
+  scene.add(enemySprite);
+
+  // 2. Physics Body (Keep the Cuboid or use a Ball for smoother sliding)
   const rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(x, y, z);
   const body = world.createRigidBody(rigidBodyDesc);
   body.mass = 0.1;
 
+  // We keep the cuboid collider so it stands on the floor correctly
   const colliderDesc = RAPIER.ColliderDesc.cuboid(1, 1, 1).setActiveEvents(
     RAPIER.ActiveEvents.COLLISION_EVENTS
   );
   world.createCollider(colliderDesc, body);
 
-  // 4. Store in array for syncing
-  sceneObjects.push([mesh, body]);
+  // 3. Store for AI and Syncing
+  const enemyData = {
+    mesh: enemySprite, // We treat the sprite as the "mesh" now
+    body: body,
+    speed: 4 + Math.random() * 4,
+  };
+
+  sceneObjects.push([enemySprite, body]);
+  enemies.push(enemyData);
 }
 
 function animate() {
@@ -301,14 +319,14 @@ function animate() {
   delta = clock.getDelta();
   world.timestep = Math.min(delta, 0.1);
 
-  projectiles.forEach((bulletCollision, lifespan) => {
-    // if (Date.now() - lifespan > 50000) {
-    //   world.removeRigidBody(bulletCollision.body);
-    // }
-
+  // Find your projectiles.forEach loop and update it:
+  projectiles.forEach((obj) => {
+    const bulletBody = obj.body; // Access the body property
     const direction = new THREE.Vector3();
     camera.getWorldDirection(direction);
-    bulletCollision.applyImpulse(
+
+    // Use bulletBody instead of bulletCollision
+    bulletBody.applyImpulse(
       new RAPIER.Vector3(
         direction.x * 0.1,
         direction.y * 0.1,
@@ -319,6 +337,54 @@ function animate() {
   });
 
   world.step(eventQueue);
+
+  eventQueue.drainCollisionEvents((handle1, handle2, started) => {
+    if (!started) {
+      return;
+    }
+
+    let bulletIndex = -1;
+    let hitHandle = null;
+
+    // 1. Check if handle1 is a bullet
+    const p1Index = projectiles.findIndex(
+      (p) => p.body.collider(0).handle === handle1
+    );
+    if (p1Index !== -1) {
+      bulletIndex = p1Index;
+      hitHandle = handle2; // The other thing we hit
+    }
+
+    // 2. If not, check if handle2 is a bullet
+    if (bulletIndex === -1) {
+      const p2Index = projectiles.findIndex(
+        (p) => p.body.collider(0).handle === handle2
+      );
+      if (p2Index !== -1) {
+        bulletIndex = p2Index;
+        hitHandle = handle1; // The other thing we hit
+      }
+    }
+
+    // If no bullet was involved in this collision, we don't care
+    if (bulletIndex === -1) return;
+
+    // 3. Safety Check: Did we shoot ourselves?
+    // If the thing we hit is the player, ignore it.
+    if (playerCollision.collider(0).handle === hitHandle) return;
+
+    // 4. Check if the thing we hit was an enemy
+    const enemyIndex = enemies.findIndex(
+      (e) => e.body.collider(0).handle === hitHandle
+    );
+
+    if (enemyIndex !== -1) {
+      destroyEnemy(enemyIndex); // Hit an enemy! Kill them.
+    }
+
+    // 5. Finally, destroy the bullet (because it hit SOMETHING: wall, floor, or enemy)
+    destroyProjectile(bulletIndex);
+  });
 
   const moveDir = new THREE.Vector3(keys.d - keys.a, 0, keys.s - keys.w);
 
@@ -366,6 +432,17 @@ function animate() {
     const r = objCollision.rotation();
     // 4. Apply it to the Three.js Mesh
     objMesh.quaternion.set(r.x, r.y, r.z, r.w);
+
+    const enemyRef = enemies.find((e) => e.body === objCollision);
+
+    if (enemyRef) {
+      // Apply smooth sine-wave bobbing
+      // Adjust 0.005 for speed and 0.3 for height
+      const bob = Math.sin(Date.now() * 0.005) * 0.3;
+
+      // Update sprite position: Physics Position + Bob Offset
+      objMesh.position.set(t.x, t.y + bob, t.z);
+    }
   });
 
   bobTimer += delta * BOB_SPEED;
@@ -387,9 +464,85 @@ function animate() {
   // 0.75 and -0.5 are your original offset values
   sprite.position.x = 0.75 + weaponBobX;
   sprite.position.y = -0.35 + weaponBobY;
+
+  // Get player position once per frame to save calculations
+  const playerPos = playerCollision.translation();
+
+  enemies.forEach((enemy) => {
+    const enemyPos = enemy.body.translation();
+
+    // 1. Calculate direction vector (Player - Enemy)
+    const direction = new THREE.Vector3(
+      playerPos.x - enemyPos.x,
+      0, // Ignore Y so they don't try to fly up/down to you
+      playerPos.z - enemyPos.z
+    );
+
+    // 2. Normalize calculates the "steering" direction
+    direction.normalize();
+
+    // 3. Move the enemy (Velocity = Direction * Speed)
+    // We preserve the enemy's current Y velocity (gravity)
+    const currentLinVel = enemy.body.linvel();
+
+    enemy.body.setLinvel(
+      {
+        x: direction.x * enemy.speed,
+        y: currentLinVel.y, // Keep gravity working
+        z: direction.z * enemy.speed,
+      },
+      true
+    );
+
+    // 4. Rotate the visual mesh to look at the player
+    enemy.mesh.lookAt(playerPos.x, enemyPos.y, playerPos.z);
+  });
+
   renderer.render(scene, camera);
 
   stats.update();
 }
 
 animate();
+
+function destroyProjectile(index) {
+  const p = projectiles[index];
+
+  // 1. Remove from Three.js Scene
+  scene.remove(p.mesh);
+  p.mesh.geometry.dispose(); // Good practice for memory
+  p.mesh.material.dispose();
+
+  // 2. Remove from Rapier World
+  world.removeRigidBody(p.body);
+
+  // 3. Remove from sceneObjects (to stop the sync loop from crashing)
+  const sceneObjIndex = sceneObjects.findIndex((item) => item[1] === p.body);
+  if (sceneObjIndex !== -1) {
+    sceneObjects.splice(sceneObjIndex, 1);
+  }
+
+  // 4. Remove from projectiles array
+  projectiles.splice(index, 1);
+}
+
+function destroyEnemy(index) {
+  const e = enemies[index];
+
+  // 1. Remove from Three.js Scene
+  scene.remove(e.mesh);
+  e.mesh.geometry.dispose();
+  e.mesh.material.dispose();
+
+  // 2. Remove from Rapier World
+  world.removeRigidBody(e.body);
+
+  // 3. Remove from sceneObjects
+  const sceneObjIndex = sceneObjects.findIndex((item) => item[1] === e.body);
+  if (sceneObjIndex !== -1) {
+    sceneObjects.splice(sceneObjIndex, 1);
+  }
+
+  // 4. Remove from enemies array
+  enemies.splice(index, 1);
+}
