@@ -5,7 +5,7 @@
     "three": "^0.181.2"
   },
   "devDependencies": {
-    "vite": "^7.2.6"
+    "vite": "^7.3.0"
   },
   "name": "final-web",
   "version": "1.0.0",
