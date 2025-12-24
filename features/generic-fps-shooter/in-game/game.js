@@ -645,10 +645,10 @@ function animate() {
     objMesh.quaternion.set(r.x, r.y, r.z, r.w);
   });
 
-  remotePlayers.forEach((id) => {
+  for (const id in remotePlayers) {
     const rp = remotePlayers[id];
-    rp.mesh.position.lerp(rp.targetPos, 0.2);
-  });
+    rp.mesh.position.lerp(rp.targetPos, 0.2); // Smooth movement
+  }
 
   bobTimer += delta * BOB_SPEED;
   const bobOffset = Math.sin(bobTimer) * BOB_AMOUNT;
@@ -698,7 +698,7 @@ function animate() {
   }
 
   renderer.render(scene, camera);
-  stats.update();
+  // stats.update();
 }
 
 //! Call the main loop! Please dont forget this otherwise the world will explode
