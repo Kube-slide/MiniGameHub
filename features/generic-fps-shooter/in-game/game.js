@@ -3,6 +3,8 @@
 //* Threejs official documentation:     https://threejs.org/manual/
 //* SimonDev's fps camera tutorial:     https://www.youtube.com/watch?v=oqKzxPMLWxo
 //* Basic syncing physics + mesh:       https://sbcode.net/threejs/physics-rapier/
+//* PeerJS official documentation:      https://peerjs.com/
+//* Making a p2p game in js:            https://medium.com/bumble-tech/webrtc-making-a-peer-to-peer-game-using-javascript-f7123aed769e  <-- [Used as reference reading material to learn more about webrtc & peerjs]
 //? Project imports
 import * as THREE from "three";
 import Stats from "three/addons/libs/stats.module.js";
@@ -24,13 +26,16 @@ import enemyTex from "./assets/enemy.png";
 //Wait for Rapier to compile
 await RAPIER.init();
 
-// --- MULTIPLAYER SETUP ---
+//! mp setup
 const peer = new Peer();
 const connections = [];
 const remotePlayers = {};
-const remoteProjectiles = []; // Visual bullets from other players
+const remoteProjectiles = [];
 
-// Helper: Am I the host? (First person in the list is host)
+/**
+ * Helper function to verify whether current client is host of lobby or not
+ * @returns boolean indicating whether peer is teh host of the lobby or a client
+ */
 function isHost() {
   if (connections.length === 0) return true;
   const allIds = connections.map((c) => c.peer);
@@ -39,14 +44,21 @@ function isHost() {
   return allIds[0] === peer.id;
 }
 
-// Helper: Send data to everyone
+/**
+ * Helper function to broadcast data to other users
+ * @param {object} data ; Data to broadcast to other clients
+ */
 function broadcast(data) {
   connections.forEach((conn) => {
     if (conn.open) conn.send(data);
   });
 }
 
-// 1. Connect to Peer
+/**
+ *  Connects to a peer
+ * @param {number} id ; Peer to connect to
+ * @returns null if peer to connect is ourself
+ */
 function connectToPeer(id) {
   if (id === peer.id || connections.find((c) => c.peer === id)) return;
   const conn = peer.connect(id);
@@ -57,6 +69,10 @@ peer.on("connection", (conn) => {
   setupConnection(conn);
 });
 
+/**
+ * Handle connecting and setting up new players states
+ * @param {*} conn
+ */
 function setupConnection(conn) {
   conn.on("open", () => {
     if (!connections.find((c) => c.peer === conn.peer)) {
@@ -95,6 +111,11 @@ function setupConnection(conn) {
   });
 }
 
+/**
+ *  Handles data initialization
+ * @param {object} data ; Information recieved to syncronize
+ * @param {number} senderId ; Peer from which data was recieved
+ */
 function handleData(data, senderId) {
   switch (data.type) {
     case "peerList":
@@ -121,18 +142,14 @@ function handleData(data, senderId) {
       spawnRemoteBullet(data.pos, data.vel);
       break;
 
-    // --- CRITICAL FIX HERE ---
     case "enemySync":
       // If I am a client (not the host), run the full sync logic
       if (!isHost()) {
         updateClientEnemies(data.list);
       }
       break;
-    // -------------------------
 
     case "spawnEnemy":
-      // IGNORE THIS NOW.
-      // We rely on enemySync to create enemies to avoid duplicates.
       break;
 
     case "hitEnemy":
@@ -180,12 +197,17 @@ window.addEventListener("resize", () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
+//? Accessible constants
 let playerCollision;
 let sprite;
 let flashSprite;
 let characterController = world.createCharacterController(0.1);
+//! Pause to load assets
 await LoadScene();
 
+/**
+ * Asyncronous function to load the new 3D scene and all required assets
+ */
 async function LoadScene() {
   //? Create lights
   const light = new THREE.HemisphereLight(0xb1e1ff, 0xb97a20, 2);
@@ -227,7 +249,7 @@ async function LoadScene() {
       side: THREE.DoubleSide,
     })
   );
-  floorMesh.rotation.x = -Math.PI / 2; // Rotate to lay flat
+  floorMesh.rotation.x = -Math.PI / 2;
   floorMesh.position.y = -1;
   floorMesh.receiveShadow = true;
   scene.add(floorMesh);
@@ -278,40 +300,39 @@ async function LoadScene() {
   scene.add(camera);
 }
 
-//? Enable stats for debugging
-const stats = new Stats();
-document.body.appendChild(stats.dom);
-
-const clock = new THREE.Clock();
-let delta;
-
+//? Misc setup
+// keyboard inputs
 const keys = {
   w: 0,
   a: 0,
   s: 0,
   d: 0,
   " ": 0,
-  shift: 0,
   escape: 0,
 };
-
 const speed = 10;
-
 const controls = new PointerLockControls(camera, renderer.domElement);
 controls.pointerSpeed = 0.5;
 
-window.addEventListener("keydown", (event) => {
-  const key = event.key.toLowerCase();
-  if (key in keys) keys[key] = 1;
-});
+//? Enable stats for debugging
+// const stats = new Stats();
+// document.body.appendChild(stats.dom);
 
-// HOST ONLY SPAWN TIMER
+const clock = new THREE.Clock();
+let delta;
+
+//! HOST ONLY SPAWN TIMER
 setInterval(() => {
   if (isHost()) {
     const data = spawnEnemy();
     broadcast({ type: "spawnEnemy", ...data });
   }
 }, Math.random() * (5000 - 1500) + 1500);
+
+window.addEventListener("keydown", (event) => {
+  const key = event.key.toLowerCase();
+  if (key in keys) keys[key] = 1;
+});
 
 window.addEventListener("keyup", (event) => {
   const key = event.key.toLowerCase();
@@ -323,7 +344,6 @@ let yVel = 0;
 const BOB_SPEED = 10;
 const BOB_AMOUNT = 0.05;
 
-// --- INJECT UI INTO PAUSE MENU ---
 const pauseMenu = document.getElementById("pause-menu");
 const resumeBtn = document.getElementById("resume-btn");
 const quitBtn = document.getElementById("quit-btn");
@@ -339,7 +359,6 @@ document.getElementById("join-btn").addEventListener("click", () => {
     document.getElementById("status-msg").innerText = "Connecting...";
   }
 });
-// ---------------------------------
 
 controls.addEventListener("lock", () => {
   pauseMenu.style.display = "none";
@@ -366,31 +385,26 @@ quitBtn.addEventListener("click", () => {
 });
 
 window.addEventListener("mousedown", (event) => {
-  // Only fire if the game is active (mouse locked) and it's a left-click (button 0)
   if (controls.isLocked && event.button === 0) {
     fireWeapon();
   }
 });
 
+/**
+ * Shooting projectiles from user's weapon
+ */
 function fireWeapon() {
-  // 1. Show flash and light
   flashSprite.visible = true;
-
-  // 2. Randomize rotation so the flash looks different every shot
   flashSprite.material.rotation = Math.random() * Math.PI;
-
-  // 3. Optional: Add a tiny "recoil" to the gun sprite
   sprite.position.z += 0.05;
 
   const direction = new THREE.Vector3();
   camera.getWorldDirection(direction);
 
-  // Calculate spawn pos slightly in front of camera
   const spawnPos = camera.position
     .clone()
     .add(direction.clone().multiplyScalar(1));
 
-  // --- LOCAL PHYSICS BULLET ---
   const newProjectile = new THREE.Mesh(
     new THREE.SphereGeometry(0.5, 10),
     new THREE.MeshStandardMaterial({ color: 0xff0000 })
@@ -424,13 +438,12 @@ function fireWeapon() {
     direction: direction.clone(),
   });
 
-  // 4. Hide it after a tiny delay
   setTimeout(() => {
     flashSprite.visible = false;
-    sprite.position.z -= 0.05; // Return gun from recoil
+    sprite.position.z -= 0.05;
   }, 50);
 
-  // --- NETWORK SYNC ---
+  //! Sync to other peers
   broadcast({
     type: "shoot",
     pos: { x: spawnPos.x, y: spawnPos.y, z: spawnPos.z },
@@ -438,6 +451,11 @@ function fireWeapon() {
   });
 }
 
+/**
+ * Spawning the bullet
+ * @param {THREE.Vector3} pos Bullet's position
+ * @param {THREE.Vector3} vel Bullet's initial velocity/dir
+ */
 function spawnRemoteBullet(pos, vel) {
   const mesh = new THREE.Mesh(
     new THREE.SphereGeometry(0.3, 8, 8),
@@ -455,12 +473,11 @@ function spawnRemoteBullet(pos, vel) {
 }
 
 function spawnEnemy(forcedX, forcedZ, forcedY, forcedId) {
+  //! Parity between host and client
   const x = forcedX ?? (Math.random() - 0.5) * 40;
   const z = forcedZ ?? (Math.random() - 0.5) * 40;
   const y = forcedY ?? 2;
-
-  // 1. Ensure we have a consistent ID
-  const uniqueId = forcedId ?? Math.random().toString(36).substr(2, 9);
+  const uniqueId = forcedId ?? Math.random().toString(36);
 
   const enemyTexture = new THREE.TextureLoader().load(enemyTex);
   const spriteMaterial = new THREE.SpriteMaterial({ map: enemyTexture });
@@ -469,22 +486,19 @@ function spawnEnemy(forcedX, forcedZ, forcedY, forcedId) {
   enemySprite.scale.set(2, 2, 1);
   scene.add(enemySprite);
 
-  // --- CRITICAL FIX FOR MOVEMENT ---
   let rigidBodyDesc;
+
+  //! Rigidbody type depends on whether they have "REAL" movements, or will simply copy from server
   if (isHost()) {
-    // Host: Dynamic (Gravity + Pushing)
     rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic()
       .setTranslation(x, y, z)
       .setRotation({ x: 0, y: 0, z: 0, w: 1 })
-      .lockRotations(); // Prevent tipping over
+      .lockRotations();
   } else {
-    // Client: Kinematic (Zero Gravity, only moves when server says so)
-    // If this is Dynamic, they will ignore server updates!
     rigidBodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased()
       .setTranslation(x, y, z)
       .setRotation({ x: 0, y: 0, z: 0, w: 1 });
   }
-  // ----------------------------------
 
   const body = world.createRigidBody(rigidBodyDesc);
   const colliderDesc = RAPIER.ColliderDesc.cuboid(1, 1, 1).setActiveEvents(
@@ -506,6 +520,7 @@ function spawnEnemy(forcedX, forcedZ, forcedY, forcedId) {
   return { x, y, z, id: uniqueId };
 }
 
+//* Main loop
 function animate() {
   const rotation = new THREE.Euler(0, 0, 0, "YXZ");
 
@@ -514,32 +529,27 @@ function animate() {
   delta = clock.getDelta();
   world.timestep = Math.min(delta, 0.1);
 
-  // Update LOCAL projectiles
   projectiles.forEach((obj) => {
     const bulletBody = obj.body;
-
-    // Use a small multiplier (e.g., 0.5) so it doesn't accelerate to infinity instantly
     const force = obj.direction.clone().multiplyScalar(0.5);
-
-    // Apply the impulse using the stored direction
     bulletBody.applyImpulse({ x: force.x, y: force.y, z: force.z }, true);
   });
 
-  // Update REMOTE projectiles (Simple visual movement)
-  for (let i = remoteProjectiles.length - 1; i >= 0; i--) {
-    const p = remoteProjectiles[i];
-    p.mesh.position.addScaledVector(p.vel, delta);
-    // Remove after 2 seconds
-    if (Date.now() - p.spawnTime > 2000) {
-      scene.remove(p.mesh);
-      remoteProjectiles.splice(i, 1);
+  remoteProjectiles.forEach((projectile, index) => {
+    projectile.mesh.position.addScaledVector(projectile.vel, delta);
+    if (Date.now() - projectile.spawnTime > 2000) {
+      scene.remove(projectile.mesh);
+      remoteProjectiles.splice(index, 1);
     }
-  }
+  });
 
   world.step(eventQueue);
 
   eventQueue.drainCollisionEvents((handle1, handle2, started) => {
-    if (!started) return;
+    //no collisions --> exit
+    if (!started) {
+      return;
+    }
 
     let bulletIndex = -1;
     let hitHandle = null;
@@ -573,18 +583,13 @@ function animate() {
       const hitEnemy = enemies[enemyIndex];
 
       if (isHost()) {
-        // Host applies damage immediately
         hitEnemy.health -= 25;
         hitEnemy.mesh.material.color.setHex(0xff0000);
         if (hitEnemy.health <= 0) {
           destroyEnemy(enemyIndex);
         }
       } else {
-        // Client tells Host "I hit this guy"
-        // We do NOT destroy it here. We wait for the Host to delete it via sync.
         if (connections.length > 0) {
-          // Send to Host (first connection is usually host in this setup, or broadcast)
-          // Ideally send specifically to host, but broadcast works for now:
           broadcast({ type: "hitEnemy", enemyId: hitEnemy.id });
         }
       }
@@ -592,7 +597,6 @@ function animate() {
     destroyProjectile(bulletIndex);
   });
 
-  // --- PLAYER MOVEMENT ---
   const moveDir = new THREE.Vector3(keys.d - keys.a, 0, keys.s - keys.w);
   rotation.setFromQuaternion(camera.quaternion);
   rotation.x = 0;
@@ -600,8 +604,11 @@ function animate() {
   moveDir.normalize().multiplyScalar(delta * speed);
 
   if (characterController.computedGrounded()) {
-    if (keys[" "] === 1) yVel = 15;
-    else yVel = -0.5;
+    if (keys[" "] === 1) {
+      yVel = 15;
+    } else {
+      yVel = -0.5;
+    }
   } else {
     yVel -= 25 * delta;
   }
@@ -620,7 +627,7 @@ function animate() {
     z: currentPos.z + movement.z,
   });
 
-  // Broadcast my movement
+  //* More than 1 user --> inform others of movement
   if (connections.length > 0) {
     broadcast({
       type: "move",
@@ -630,21 +637,18 @@ function animate() {
     });
   }
 
-  // --- SYNC OBJECTS TO PHYSICS ---
   sceneObjects.forEach(([objMesh, objCollision]) => {
     const t = objCollision.translation();
     objMesh.position.set(t.x, t.y, t.z);
 
-    // Rotation
     const r = objCollision.rotation();
     objMesh.quaternion.set(r.x, r.y, r.z, r.w);
   });
 
-  // --- SYNC REMOTE PLAYERS ---
-  for (const id in remotePlayers) {
+  remotePlayers.forEach((id) => {
     const rp = remotePlayers[id];
-    rp.mesh.position.lerp(rp.targetPos, 0.2); // Smooth movement
-  }
+    rp.mesh.position.lerp(rp.targetPos, 0.2);
+  });
 
   bobTimer += delta * BOB_SPEED;
   const bobOffset = Math.sin(bobTimer) * BOB_AMOUNT;
@@ -660,7 +664,6 @@ function animate() {
   sprite.position.x = 0.75 + weaponBobX;
   sprite.position.y = -0.35 + weaponBobY;
 
-  // --- HOST AI LOGIC ---
   if (isHost()) {
     const playerPos = playerCollision.translation();
     enemies.forEach((enemy) => {
@@ -681,16 +684,14 @@ function animate() {
         },
         true
       );
-      // LookAt is handled by Sprite always facing camera, so simpler here
     });
 
-    // Broadcast Enemy Positions
-    const enemySyncList = enemies.map((e) => ({
-      id: e.id,
-      x: e.body.translation().x,
-      y: e.body.translation().y,
-      z: e.body.translation().z,
-      hp: e.health,
+    const enemySyncList = enemies.map((enemy) => ({
+      id: enemy.id,
+      x: enemy.body.translation().x,
+      y: enemy.body.translation().y,
+      z: enemy.body.translation().z,
+      hp: enemy.health,
     }));
     if (enemies.length > 0)
       broadcast({ type: "enemySync", list: enemySyncList });
@@ -700,6 +701,7 @@ function animate() {
   stats.update();
 }
 
+//! Call the main loop! Please dont forget this otherwise the world will explode
 animate();
 
 function destroyProjectile(index) {
@@ -710,7 +712,9 @@ function destroyProjectile(index) {
   world.removeRigidBody(p.body);
 
   const sceneObjIndex = sceneObjects.findIndex((item) => item[1] === p.body);
-  if (sceneObjIndex !== -1) sceneObjects.splice(sceneObjIndex, 1);
+  if (sceneObjIndex !== -1) {
+    sceneObjects.splice(sceneObjIndex, 1);
+  }
   projectiles.splice(index, 1);
 }
 
@@ -722,28 +726,25 @@ function destroyEnemy(index) {
   world.removeRigidBody(e.body);
 
   const sceneObjIndex = sceneObjects.findIndex((item) => item[1] === e.body);
-  if (sceneObjIndex !== -1) sceneObjects.splice(sceneObjIndex, 1);
+  if (sceneObjIndex !== -1) {
+    sceneObjects.splice(sceneObjIndex, 1);
+  }
   enemies.splice(index, 1);
 }
 
 function updateClientEnemies(serverList) {
-  // 1. UPDATE or CREATE enemies
   serverList.forEach((serverEnemy) => {
     const localEnemy = enemies.find((e) => e.id === serverEnemy.id);
 
     if (localEnemy) {
-      // Sync Position
       localEnemy.body.setNextKinematicTranslation({
         x: serverEnemy.x,
         y: serverEnemy.y,
         z: serverEnemy.z,
       });
 
-      // Sync Health
-      localEnemy.health = serverEnemy.hp; // <--- ADD THIS
+      localEnemy.health = serverEnemy.hp;
 
-      // Optional: Visual Damage Feedback
-      // Make them redder as they die
       if (localEnemy.health < 100) {
         localEnemy.mesh.material.color.setHex(0xff0000);
       }
@@ -752,14 +753,12 @@ function updateClientEnemies(serverList) {
     }
   });
 
-  // 2. DELETE enemies that are gone from the server
-  // Iterate backwards so we can splice safely
-  for (let i = enemies.length - 1; i >= 0; i--) {
-    const localEnemy = enemies[i];
+  enemies.forEach((enemy, index) => {
+    const localEnemy = enemies[index];
     const stillAlive = serverList.find((s) => s.id === localEnemy.id);
 
     if (!stillAlive) {
-      destroyEnemy(i);
+      destroyEnemy(index);
     }
-  }
+  });
 }
