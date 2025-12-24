@@ -13,7 +13,7 @@ a {
 body {
   height: 100vh;
   /* Replace the URL below with your actual background image */
-  background: url("your-game-screenshot.jpg") no-repeat center center/cover;
+  background: url("./assets/bg.png") no-repeat center center/cover;
   display: flex;
   flex-direction: column;
   color: white;
