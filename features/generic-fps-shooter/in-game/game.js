@@ -459,7 +459,7 @@ function spawnEnemy(forcedX, forcedZ, forcedY, forcedId) {
   const z = forcedZ ?? (Math.random() - 0.5) * 40;
   const y = forcedY ?? 2;
 
-  // GENERATE UNIQUE ID (Critical for syncing)
+  // 1. Ensure we have a consistent ID
   const uniqueId = forcedId ?? Math.random().toString(36).substr(2, 9);
 
   const enemyTexture = new THREE.TextureLoader().load(enemyTex);
@@ -469,16 +469,24 @@ function spawnEnemy(forcedX, forcedZ, forcedY, forcedId) {
   enemySprite.scale.set(2, 2, 1);
   scene.add(enemySprite);
 
-  // Dynamic body so it can fall/move
-  const rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(x, y, z);
-  // Important: Lock rotation so they don't tip over
-  rigidBodyDesc.setRotation({ x: 0, y: 0, z: 0, w: 1 });
+  // --- CRITICAL FIX FOR MOVEMENT ---
+  let rigidBodyDesc;
+  if (isHost()) {
+    // Host: Dynamic (Gravity + Pushing)
+    rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic()
+      .setTranslation(x, y, z)
+      .setRotation({ x: 0, y: 0, z: 0, w: 1 })
+      .lockRotations(); // Prevent tipping over
+  } else {
+    // Client: Kinematic (Zero Gravity, only moves when server says so)
+    // If this is Dynamic, they will ignore server updates!
+    rigidBodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased()
+      .setTranslation(x, y, z)
+      .setRotation({ x: 0, y: 0, z: 0, w: 1 });
+  }
+  // ----------------------------------
+
   const body = world.createRigidBody(rigidBodyDesc);
-  body.mass = 0.1;
-
-  // Lock rotation axis just to be safe
-  body.lockRotations(true, true);
-
   const colliderDesc = RAPIER.ColliderDesc.cuboid(1, 1, 1).setActiveEvents(
     RAPIER.ActiveEvents.COLLISION_EVENTS
   );
@@ -487,15 +495,14 @@ function spawnEnemy(forcedX, forcedZ, forcedY, forcedId) {
   const enemyData = {
     mesh: enemySprite,
     body: body,
-    id: uniqueId, // USE THE STRING ID
-    health: 100, // Add HP tracking
+    id: uniqueId,
+    health: 100,
     speed: 4 + Math.random() * 4,
     targetPos: new THREE.Vector3(x, y, z),
   };
   enemies.push(enemyData);
   sceneObjects.push([enemySprite, body]);
 
-  // Return data so Host can broadcast it
   return { x, y, z, id: uniqueId };
 }
 
@@ -568,6 +575,7 @@ function animate() {
       if (isHost()) {
         // Host applies damage immediately
         hitEnemy.health -= 25;
+        hitEnemy.mesh.material.color.setHex(0xff0000);
         if (hitEnemy.health <= 0) {
           destroyEnemy(enemyIndex);
         }
