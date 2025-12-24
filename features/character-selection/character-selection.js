@@ -4,7 +4,7 @@ import { PLAYER_3 } from "../../constants/player.js";
 import { PLAYER_4 } from "../../constants/player.js";
 import { PLAYER_5 } from "../../constants/player.js";
 import { PLAYER_6 } from "../../constants/player.js";
-import { getAPIPlayers } from "../../utils/character-api.js";
+import { getAPIPlayers } from "../../services/character-api.js";
 
 const players = [PLAYER_1, PLAYER_2, PLAYER_3, PLAYER_4, PLAYER_5, PLAYER_6];
 const APICharacters = await getAPIPlayers();
